@@ -1,0 +1,1007 @@
+:root {
+  color: #f7f0dc;
+  background: #0c1019;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  color: #151515;
+  background: #ffd166;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.75rem 1rem;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+select {
+  border: 1px solid #39445f;
+  border-radius: 10px;
+  color: #f7f0dc;
+  background: #111827;
+  padding: 0.65rem 0.8rem;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.shell-centered {
+  display: grid;
+  place-items: center;
+}
+
+.battle-layout {
+  display: grid;
+  grid-template-columns: minmax(620px, 1fr) 360px;
+  gap: 1rem;
+}
+
+.battle-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid #242b3d;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.08), rgba(5, 8, 14, 0.2)),
+    url("./assets/backgrounds/pig-fort-background.png") center / cover no-repeat;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.battle-stage::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  box-shadow: inset 0 -70px 90px rgba(0, 0, 0, 0.22);
+}
+
+.battle-canvas,
+.battle-stage canvas {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+}
+
+.side-stack {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(28, 34, 50, 0.75), rgba(15, 20, 33, 0.85));
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 1.25rem;
+}
+
+.draft-panel {
+  width: min(920px, calc(100vw - 2rem));
+}
+
+.eyebrow {
+  color: #95a3bd;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: 0.95;
+  margin-bottom: 0.75rem;
+}
+
+h2 {
+  margin-bottom: 0;
+}
+
+.copy {
+  color: #c6ccda;
+  max-width: 64ch;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+  color: #c6ccda;
+  font-weight: 800;
+  margin: 1rem 0;
+}
+
+.draft-slots,
+.choices,
+.hud-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.draft-slots {
+  grid-template-columns: repeat(4, 1fr);
+  margin: 1rem 0;
+}
+
+.draft-slot {
+  border: 1px dashed #39445f;
+  border-radius: 14px;
+  color: #c6ccda;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.choices {
+  grid-template-columns: 1fr 1fr;
+}
+
+.bird-card {
+  display: grid;
+  gap: 0.45rem;
+  min-height: 185px;
+  color: #f7f0dc;
+  background: #263149;
+  text-align: left;
+}
+
+.bird-card:hover {
+  background: #34415f;
+}
+
+.bird-card strong {
+  color: #ffd166;
+  font-size: 1.35rem;
+}
+
+.bird-card span,
+.bird-card small,
+.hint,
+.muted {
+  color: #c6ccda;
+}
+
+.hud-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ghost {
+  color: #f7f0dc;
+  background: #253047;
+}
+
+.selected-card {
+  border: 1px solid #34415f;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.selected-card.empty {
+  color: #95a3bd;
+}
+
+.selected-card p {
+  margin-bottom: 0.35rem;
+}
+
+.relics {
+  color: #ffd166;
+}
+
+.event-log {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.event-log p:not(.eyebrow) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+  color: #dce3f4;
+  margin-bottom: 0;
+  padding: 0.65rem 0;
+}
+
+@media (max-width: 980px) {
+  .battle-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-stage {
+    min-height: min(60vh, 420px);
+  }
+
+  .choices,
+  .draft-slots {
+    grid-template-columns: 1fr;
+  }
+}
+
+.five-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.five-actions .ghost {
+  grid-column: 1 / -1;
+}
+
+.active-action {
+  background: #ff8f3d;
+  box-shadow: 0 0 15px rgba(255, 143, 61, 0.4), 0 0 0 3px rgba(255, 209, 102, 0.4) inset;
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+.selected-title-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.status-pills span {
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  border-radius: 999px;
+  color: #ffe8a8;
+  background: rgba(255, 209, 102, 0.12);
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 0.2rem 0.45rem;
+  text-transform: uppercase;
+}
+
+.hud-health-line {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.hud-health-line span {
+  color: #f7f0dc;
+  font-weight: 900;
+}
+
+.hud-health-track,
+.combatant-health-track,
+.star-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.hud-health-track {
+  height: 0.85rem;
+}
+
+.hud-health-fill,
+.combatant-health-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff3b32, #ffe25e 60%, #73e35f);
+  transition: width 160ms ease-out;
+}
+
+.battle-hud-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.5rem;
+  pointer-events: none;
+  padding: 0.75rem;
+}
+
+.battle-hud-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.enemy-row {
+  grid-row: 1;
+  justify-content: flex-end;
+}
+
+.player-row {
+  grid-row: 3;
+  justify-content: flex-start;
+}
+
+.combatant-badge {
+  display: grid;
+  grid-template-columns: 2.35rem minmax(7.5rem, 10.5rem);
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(30, 38, 56, 0.85), rgba(15, 20, 33, 0.95));
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  padding: 0.35rem 0.65rem 0.35rem 0.35rem;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.combatant-badge.selected {
+  border-color: #ffd166;
+  box-shadow: 0 0 15px rgba(255, 209, 102, 0.3), 0 0 0 2px rgba(255, 209, 102, 0.8) inset;
+  transform: scale(1.05);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pig-badge {
+  direction: rtl;
+}
+
+.pig-badge .combatant-info,
+.pig-badge .combatant-topline {
+  direction: ltr;
+}
+
+.combatant-avatar {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  object-fit: contain;
+}
+
+.fallback-avatar {
+  display: grid;
+  place-items: center;
+  color: #151515;
+  background: #ffd166;
+  font-weight: 1000;
+}
+
+.combatant-info {
+  display: grid;
+  gap: 0.23rem;
+}
+
+.combatant-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  color: #f7f0dc;
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.combatant-topline strong {
+  max-width: 6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combatant-topline span,
+.combatant-info small {
+  color: #ffe8a8;
+  font-weight: 900;
+}
+
+.combatant-health-track {
+  height: 0.45rem;
+}
+
+.star-track {
+  height: 0.28rem;
+}
+
+.star-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #55c6ff, #ffffff);
+  transition: width 160ms ease-out;
+}
+
+@media (max-width: 980px) {
+  .combatant-badge {
+    grid-template-columns: 2rem minmax(5.75rem, 7.5rem);
+    padding-right: 0.45rem;
+  }
+
+  .combatant-avatar {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .combatant-topline strong {
+    max-width: 4.25rem;
+  }
+}
+
+.world-panel {
+  width: min(1180px, calc(100vw - 2rem));
+}
+
+.world-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.campaign-grid {
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(300px, 380px);
+  gap: 1rem;
+}
+
+.territory-map {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-rows: repeat(3, minmax(108px, auto));
+  gap: 0.8rem;
+  align-items: stretch;
+  border: 1px solid #34415f;
+  border-radius: 18px;
+  background: radial-gradient(circle at 12% 50%, rgba(255, 209, 102, 0.15), transparent 24%), rgba(255, 255, 255, 0.035);
+  padding: 1rem;
+}
+
+.territory-node {
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  min-height: 6.4rem;
+  color: #dce3f4;
+  background: #263149;
+  text-align: left;
+}
+
+.territory-node.bird {
+  color: #101914;
+  background: #69e39b;
+}
+
+.territory-node.pig {
+  background: #3a2632;
+}
+
+.territory-node.selectable {
+  color: #151515;
+  background: #ffd166;
+  box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.17);
+}
+
+.territory-node span,
+.territory-node small {
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.flock-progress {
+  border: 1px solid #34415f;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 1rem;
+}
+
+.flock-summary h2 {
+  margin: 0.15rem 0 0.4rem;
+}
+
+.flock-list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.bird-progress-row {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.65rem;
+}
+
+.bird-progress-row > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.bird-progress-row strong {
+  color: #ffd166;
+}
+
+.bird-progress-row span,
+.bird-progress-row small {
+  color: #c6ccda;
+}
+
+.bird-progress-row.pow {
+  opacity: 0.7;
+  background: rgba(255, 77, 77, 0.1);
+}
+
+.bird-progress-row.pow strong,
+.bird-progress-row.pow small {
+  color: #ffaaa5;
+}
+
+@media (max-width: 980px) {
+  .campaign-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .territory-map {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+
+  .territory-node {
+    grid-row: auto !important;
+    grid-column: auto !important;
+  }
+}
+
+/* Timing/combo pivot UI */
+.timing-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.timing-actions button:last-child {
+  grid-column: 1 / -1;
+}
+
+.combo-card {
+  border: 1px solid rgba(255, 209, 102, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 209, 102, 0.08);
+  margin-bottom: 0.85rem;
+  padding: 0.85rem;
+}
+
+.combo-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #ffe8a8;
+  font-weight: 900;
+  margin-bottom: 0.45rem;
+}
+
+.combo-track,
+.gauge-track,
+.timing-window-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.combo-track {
+  height: 0.85rem;
+}
+
+.combo-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #55c6ff, #ffffff, #ffd166);
+  transition: width 140ms ease-out;
+}
+
+.gauge-track {
+  height: 0.3rem;
+}
+
+.gauge-track.large {
+  height: 0.65rem;
+}
+
+.gauge-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5bc6ff, #ffd166);
+  transition: width 110ms linear;
+}
+
+.boss-rule-pill {
+  border: 1px solid rgba(255, 122, 57, 0.3);
+  border-radius: 14px;
+  color: #ffd7c0;
+  background: rgba(255, 122, 57, 0.1);
+  font-weight: 800;
+  padding: 0.65rem 0.75rem;
+}
+
+.combatant-button {
+  color: inherit;
+  background: linear-gradient(180deg, rgba(30, 38, 56, 0.85), rgba(15, 20, 33, 0.95));
+  cursor: pointer;
+  pointer-events: auto;
+  text-align: inherit;
+}
+
+.combatant-button:hover {
+  border-color: rgba(255, 209, 102, 0.6);
+  transform: translateY(-1px);
+}
+
+.timing-prompt-slot {
+  grid-row: 2;
+  min-height: 4.25rem;
+}
+
+.timing-prompt {
+  grid-row: 2;
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  grid-template-columns: auto minmax(220px, 320px);
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(255, 209, 102, 0.45);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(18, 24, 37, 0.72), rgba(8, 11, 18, 0.82));
+  box-shadow: 0 0 32px rgba(255, 209, 102, 0.22), 0 18px 60px rgba(0, 0, 0, 0.45);
+  color: #fff4c8;
+  padding: 0.8rem 1rem;
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+
+.timing-prompt.perfect {
+  border-color: #9fffa9;
+  box-shadow: 0 0 36px rgba(159, 255, 169, 0.35), 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.timing-button {
+  display: grid;
+  place-items: center;
+  min-width: 4.3rem;
+  min-height: 4.3rem;
+  border-radius: 999px;
+  color: #16120b;
+  background: #ffd166;
+  font-size: 0.9rem;
+  font-weight: 1000;
+  box-shadow: 0 0 0 6px rgba(255, 209, 102, 0.18), 0 0 24px rgba(255, 209, 102, 0.55);
+  animation: timingPulse 0.42s ease-in-out infinite alternate;
+}
+
+.timing-prompt strong,
+.timing-prompt span {
+  display: block;
+}
+
+.timing-prompt strong {
+  font-size: 1rem;
+  margin-bottom: 0.15rem;
+}
+
+.timing-prompt span {
+  color: #c6ccda;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 0.42rem;
+}
+
+.timing-window-track {
+  height: 0.5rem;
+}
+
+.timing-window-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff3b32, #ffd166, #9fffa9);
+  transition: width 50ms linear;
+}
+
+@keyframes timingPulse {
+  from { transform: scale(0.96); }
+  to { transform: scale(1.05); }
+}
+
+/* Auto-chess preparation pivot */
+.autochess-layout {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+  padding: 0.75rem;
+}
+
+.autochess-stage {
+  max-height: min(68vh, 760px);
+}
+
+.autochess-bottom {
+  display: grid;
+  grid-template-columns: minmax(720px, 1fr) minmax(280px, 360px);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.shop-panel {
+  padding: 0.9rem;
+}
+
+.shop-header,
+.shop-actions,
+.economy-pills,
+.roster-title,
+.combatant-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.shop-header {
+  margin-bottom: 0.65rem;
+}
+
+.economy-pills {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.economy-pills span,
+.round-banner span,
+.round-banner strong {
+  border: 1px solid rgba(255, 209, 102, 0.24);
+  border-radius: 999px;
+  color: #ffe8a8;
+  background: rgba(255, 209, 102, 0.12);
+  font-weight: 900;
+  padding: 0.42rem 0.65rem;
+}
+
+.prep-grid {
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+.roster-strip {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.65rem;
+}
+
+.roster-title {
+  color: #f7f0dc;
+  margin-bottom: 0.5rem;
+}
+
+.roster-title span,
+.shop-hint,
+.slot-card small,
+.shop-card small {
+  color: #c6ccda;
+}
+
+.slot-card-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.roster-strip.compact .slot-card-row {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.slot-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  min-height: 4.1rem;
+  gap: 0.45rem;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.42rem;
+}
+
+.slot-card.filled {
+  border-style: solid;
+  border-color: rgba(255, 209, 102, 0.35);
+  background: linear-gradient(180deg, rgba(255, 209, 102, 0.12), rgba(255, 255, 255, 0.04));
+}
+
+.slot-card strong {
+  display: block;
+  color: #ffd166;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-slot-dot {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: #151515;
+  background: rgba(255, 209, 102, 0.9);
+  font-weight: 1000;
+}
+
+.shop-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.shop-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.28rem;
+  min-height: 8.9rem;
+  color: #f7f0dc;
+  background: linear-gradient(180deg, rgba(51, 63, 91, 0.94), rgba(24, 31, 48, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.65rem 0.45rem;
+  text-align: center;
+}
+
+.shop-card:not(:disabled):hover {
+  border-color: rgba(255, 209, 102, 0.65);
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.2);
+  transform: translateY(-2px);
+}
+
+.shop-card strong {
+  color: #ffd166;
+  line-height: 1.05;
+}
+
+.shop-card .price {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.42rem;
+  border-radius: 999px;
+  color: #16120b;
+  background: #ffd166;
+  font-weight: 1000;
+  padding: 0.18rem 0.45rem;
+}
+
+.shop-card.sold {
+  display: grid;
+  place-items: center;
+  color: #95a3bd;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.shop-actions {
+  justify-content: start;
+  margin-top: 0.65rem;
+}
+
+.shop-actions .primary {
+  color: #16120b;
+  background: linear-gradient(180deg, #ffe48a, #ffb347);
+  box-shadow: 0 0 20px rgba(255, 209, 102, 0.22);
+}
+
+.shop-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.86rem;
+}
+
+.unit-portrait {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: radial-gradient(circle at 45% 35%, rgba(255, 255, 255, 0.24), rgba(0, 0, 0, 0.22));
+  box-shadow: inset 0 -8px 14px rgba(0, 0, 0, 0.22);
+  vertical-align: middle;
+}
+
+.unit-portrait img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.autochess-hud .combatant-badge {
+  pointer-events: auto;
+  grid-template-columns: auto minmax(8rem, 10.5rem);
+}
+
+.autochess-hud .unit-portrait {
+  width: 2.55rem !important;
+  height: 2.55rem !important;
+}
+
+.round-banner {
+  grid-row: 2;
+  align-self: start;
+  justify-self: center;
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.3rem;
+  pointer-events: none;
+}
+
+.compact-player-row {
+  transform: translateY(-0.25rem);
+}
+
+.autochess-bottom .event-log {
+  max-height: 19.8rem;
+  padding: 0.95rem;
+}
+
+@media (max-width: 1100px) {
+  .autochess-bottom,
+  .prep-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .roster-strip.compact .slot-card-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
