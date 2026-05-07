@@ -10,3 +10,6 @@ export const EGG_MIN_X = 3;
 export const EGG_MAX_X = 6;
 export const DEFAULT_STAR_MAX = 10;
 export const EVENT_LOG_LIMIT = 9;
+
+export const MAP_BATTLE_ROUNDS = 8;
+export const BOSS_ROUND_NUMBER = MAP_BATTLE_ROUNDS + 1;

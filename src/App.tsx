@@ -2,9 +2,8 @@ import { useMemo } from 'react';
 import { createBattleEngine } from './game/ecs/engine';
 import { BattleCanvas } from './render/BattleCanvas';
 import { useGameStore } from './store/useGameStore';
-import { AutoChessPanel } from './ui/AutoChessPanel';
+import { AutoChessOverlay } from './ui/AutoChessOverlay';
 import { BattleHudOverlay } from './ui/BattleHudOverlay';
-import { EventLog } from './ui/EventLog';
 import { WorldMapPanel } from './ui/WorldMapPanel';
 
 export function App() {
@@ -20,14 +19,11 @@ export function App() {
   }
 
   return (
-    <main className="app battle-layout autochess-layout">
-      <div className="battle-stage">
+    <main className="app battle-layout autochess-layout no-side-panel">
+      <div className="battle-stage autochess-stage">
         <BattleCanvas engine={engine} />
         <BattleHudOverlay engine={engine} />
-      </div>
-      <div className="side-stack">
-        <AutoChessPanel engine={engine} />
-        <EventLog />
+        <AutoChessOverlay engine={engine} />
       </div>
     </main>
   );

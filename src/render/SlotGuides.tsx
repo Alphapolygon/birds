@@ -1,40 +1,23 @@
 import { useMemo } from 'react';
 import { MeshBasicMaterial, RingGeometry } from 'three';
-import { ACTIVE_BOARD_SLOTS, BENCH_SLOTS } from '../game/formationSlots';
-import { slotWorldPosition } from './sceneMath';
+import { ACTIVE_BOARD_SLOTS, BENCH_SLOTS, slotPosition } from '../game/formationSlots';
 import type { BattleEngine } from '../game/ecs/engine';
 
 export function SlotGuides({ engine }: { engine: BattleEngine }) {
-  const activeMaterial = useMemo(() => new MeshBasicMaterial({ color: '#76ff9b', transparent: true, opacity: 0.36, depthWrite: false }), []);
-  const benchMaterial = useMemo(() => new MeshBasicMaterial({ color: '#ffd166', transparent: true, opacity: 0.45, depthWrite: false }), []);
-  
-  // Make the rings slightly larger so they look right when tilted
-  const geometry = useMemo(() => new RingGeometry(0.55, 0.65, 32), []);
-  
+  const activeMaterial = useMemo(() => new MeshBasicMaterial({ color: '#76ff9b', transparent: true, opacity: 0.34, depthWrite: false }), []);
+  const benchMaterial = useMemo(() => new MeshBasicMaterial({ color: '#ffd166', transparent: true, opacity: 0.28, depthWrite: false }), []);
+  const geometry = useMemo(() => new RingGeometry(0.31, 0.38, 40), []);
   if (engine.world.combatStarted === 1 || engine.world.battleEnded === 1) return null;
-  
   return (
     <group renderOrder={2}>
-      <BenchPlate />
       {ACTIVE_BOARD_SLOTS.map((slot) => <SlotRing key={slot} slot={slot} geometry={geometry} material={activeMaterial} />)}
-      {BENCH_SLOTS.map((slot) => <SlotRing key={slot} slot={slot} geometry={geometry} material={benchMaterial} />)}
+      {BENCH_SLOTS.map((slot) => <SlotRing key={slot} slot={slot} geometry={geometry} material={benchMaterial} bench />)}
     </group>
   );
 }
 
-// Renders a dark, semi-transparent rectangle perfectly behind the bench row
-function BenchPlate() {
-  const [x, y, z] = slotWorldPosition(12, -0.15); 
-  return (
-    <mesh position={[0.5, y + 0.1, z - 0.05]}>
-      <planeGeometry args={[11.5, 2.0]} />
-      <meshBasicMaterial color="#0b101a" transparent opacity={0.8} depthWrite={false} />
-    </mesh>
-  );
-}
-
-function SlotRing({ slot, geometry, material }: { slot: number; geometry: RingGeometry; material: MeshBasicMaterial }) {
-  const [x, y, z] = slotWorldPosition(slot, -0.05);
-  // Using rotation X to tilt the ring down so it physically lays flat on the dirt!
-  return <mesh geometry={geometry} material={material} position={[x, y, z]} rotation={[-Math.PI / 2.5, 0, 0]} />;
+function SlotRing({ slot, geometry, material, bench = false }: { slot: number; geometry: RingGeometry; material: MeshBasicMaterial; bench?: boolean }) {
+  const [x, y, z] = slotPosition(slot, -0.08);
+  const scaleY = bench ? 0.32 : 0.42;
+  return <mesh geometry={geometry} material={material} position={[x, y - (bench ? 0.34 : 0.36), z - 0.08]} scale={[1, scaleY, 1]} rotation={[0, 0, 0]} />;
 }

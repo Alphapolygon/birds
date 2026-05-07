@@ -37,26 +37,16 @@ export const enum BossRule {
   ComboDrain = 6,
 }
 
-export const enum ActionTimingState {
+export const enum ActionAnimState {
   Idle = 0,
   Windup = 1,
-  ActionWindow = 2,
-  Recovery = 3,
+  Recovery = 2,
 }
 
-export const enum CommandResult {
-  Unresolved = 0,
-  Fail = 1,
-  Good = 2,
-  Perfect = 3,
-}
-
-export const enum TimelineActionKind {
+export const enum AutoActionKind {
   None = 0,
-  BasicAttack = 1,
-  ChargedAttack = 2,
-  EnemyAttack = 3,
-  DuoAttack = 4,
+  Attack = 1,
+  Special = 2,
 }
 
 export type BirdId =
@@ -74,7 +64,7 @@ export type BirdId =
 
 export type UnitId = BirdId | 'pig_grunt' | 'pig_archer' | 'pig_bruiser' | 'pig_thief' | 'pig_boss';
 
-export type TimingRelicId = 'greased_feathers' | 'hourglass_shard' | 'mirror_shield' | 'combo_battery' | 'cursed_weights';
+export type AutoRelicId = 'greased_feathers' | 'hourglass_shard' | 'mirror_shield' | 'combo_battery' | 'cursed_weights';
 
 export type LegacyRelicId =
   | 'brimstone_feather'
@@ -87,7 +77,7 @@ export type LegacyRelicId =
   | 'seismic_stomp'
   | 'golden_magnet';
 
-export type RelicId = TimingRelicId | LegacyRelicId;
+export type RelicId = AutoRelicId | LegacyRelicId;
 
 export type CombatRole = 'melee' | 'indirect' | 'specialist';
 
@@ -141,10 +131,6 @@ export type GameEventType =
   | 'exp_gained'
   | 'level_up'
   | 'territory_conquered'
-  | 'timeline_ready'
-  | 'timing_perfect'
-  | 'timing_fail'
-  | 'combo_changed'
   | 'boss_rule'
   | 'shop_refreshed'
   | 'unit_bought'

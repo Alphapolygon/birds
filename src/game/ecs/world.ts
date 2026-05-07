@@ -1,12 +1,11 @@
 import { MAX_ENTITIES, TILE_COUNT } from '../constants';
 import {
-  ActionTimingState,
+  ActionAnimState,
+  AutoActionKind,
   BossRule,
-  CommandResult,
   EntityKind,
   Faction,
   TerrainType,
-  TimelineActionKind,
   TurnSide,
   type BirdId,
   type GameEvent,
@@ -38,24 +37,23 @@ export type World = {
   dragY: number;
   dragZ: number;
 
-  // Timeline / timing-combat state.
+  // Smooth real-time stage positions used by the auto-battler simulation.
+  posX: Float32Array;
+  posY: Float32Array;
+  posZ: Float32Array;
+  homeX: Float32Array;
+  homeY: Float32Array;
+  homeZ: Float32Array;
+
+  // Auto-battler action state.
   activeEntity: number;
   activeTarget: number;
-  activeCommandEntity: number;
-  activeActionKind: TimelineActionKind;
+  activeActionKind: AutoActionKind;
   activeActionClock: number;
-  activeWindowDuration: number;
   activeDamageResolved: 0 | 1;
-  waitingForCommand: 0 | 1;
-  timelinePaused: 0 | 1;
-  partyComboMeter: number;
-  partyComboMax: number;
   bossEntity: number;
   bossTimer: number;
   timeWarpMultiplier: number;
-  duoActorA: number;
-  duoActorB: number;
-  duoStep: number;
 
   active: Uint8Array;
   kind: Uint8Array;
@@ -109,14 +107,25 @@ export type World = {
   starTier: Uint8Array;
   speed: Int32Array;
   actionGauge: Float32Array;
-  timingState: Uint8Array;
-  timingClock: Float32Array;
-  commandResult: Uint8Array;
+  actionState: Uint8Array;
+  actionClock: Float32Array;
+  actionKind: Uint8Array;
+  actionResolved: Uint8Array;
+  attackCooldown: Float32Array;
+  mana: Float32Array;
   targetEntity: Int32Array;
-  blockWindowBonus: Uint8Array;
   carriesRelic: Uint32Array;
   gaugeFillCount: Uint8Array;
   lastAttacker: Int32Array;
+  animId: Uint16Array;
+  animClock: Float32Array;
+  floatValue: Int32Array;
+  floatLife: Float32Array;
+  floatMaxLife: Float32Array;
+  floatX: Float32Array;
+  floatY: Float32Array;
+  floatZ: Float32Array;
+  floatKind: Uint8Array;
 
   displayName: string[];
   spriteKey: string[];
@@ -165,21 +174,12 @@ export function resetEconomy(world: World): void {
 export function resetTimeline(world: World): void {
   world.activeEntity = -1;
   world.activeTarget = -1;
-  world.activeCommandEntity = -1;
-  world.activeActionKind = TimelineActionKind.None;
+  world.activeActionKind = AutoActionKind.None;
   world.activeActionClock = 0;
-  world.activeWindowDuration = 0;
   world.activeDamageResolved = 0;
-  world.waitingForCommand = 0;
-  world.timelinePaused = 0;
-  world.partyComboMeter = 0;
-  world.partyComboMax = 8;
   world.bossEntity = -1;
   world.bossTimer = 0;
   world.timeWarpMultiplier = 1;
-  world.duoActorA = -1;
-  world.duoActorB = -1;
-  world.duoStep = 0;
 }
 
 export function allocateEntity(world: World): number {
@@ -197,6 +197,8 @@ export function allocateEntity(world: World): number {
   world.uvScaleX[id] = 1;
   world.uvScaleY[id] = 1;
   world.uvAspectRatio[id] = 1;
+  world.actionKind[id] = 0;
+  world.actionResolved[id] = 0;
   return id;
 }
 
@@ -251,23 +253,20 @@ function makeWorld(): World {
     dragX: 0,
     dragY: 0,
     dragZ: 0,
+    posX: new Float32Array(MAX_ENTITIES),
+    posY: new Float32Array(MAX_ENTITIES),
+    posZ: new Float32Array(MAX_ENTITIES),
+    homeX: new Float32Array(MAX_ENTITIES),
+    homeY: new Float32Array(MAX_ENTITIES),
+    homeZ: new Float32Array(MAX_ENTITIES),
     activeEntity: -1,
     activeTarget: -1,
-    activeCommandEntity: -1,
-    activeActionKind: TimelineActionKind.None,
+    activeActionKind: AutoActionKind.None,
     activeActionClock: 0,
-    activeWindowDuration: 0,
     activeDamageResolved: 0,
-    waitingForCommand: 0,
-    timelinePaused: 0,
-    partyComboMeter: 0,
-    partyComboMax: 8,
     bossEntity: -1,
     bossTimer: 0,
     timeWarpMultiplier: 1,
-    duoActorA: -1,
-    duoActorB: -1,
-    duoStep: 0,
     active: new Uint8Array(MAX_ENTITIES),
     kind: new Uint8Array(MAX_ENTITIES),
     faction: new Uint8Array(MAX_ENTITIES),
@@ -316,14 +315,25 @@ function makeWorld(): World {
     starTier: new Uint8Array(MAX_ENTITIES),
     speed: new Int32Array(MAX_ENTITIES),
     actionGauge: new Float32Array(MAX_ENTITIES),
-    timingState: new Uint8Array(MAX_ENTITIES),
-    timingClock: new Float32Array(MAX_ENTITIES),
-    commandResult: new Uint8Array(MAX_ENTITIES),
+    actionState: new Uint8Array(MAX_ENTITIES),
+    actionClock: new Float32Array(MAX_ENTITIES),
+    actionKind: new Uint8Array(MAX_ENTITIES),
+    actionResolved: new Uint8Array(MAX_ENTITIES),
+    attackCooldown: new Float32Array(MAX_ENTITIES),
+    mana: new Float32Array(MAX_ENTITIES),
     targetEntity: new Int32Array(MAX_ENTITIES),
-    blockWindowBonus: new Uint8Array(MAX_ENTITIES),
     carriesRelic: new Uint32Array(MAX_ENTITIES),
     gaugeFillCount: new Uint8Array(MAX_ENTITIES),
     lastAttacker: new Int32Array(MAX_ENTITIES),
+    animId: new Uint16Array(MAX_ENTITIES),
+    animClock: new Float32Array(MAX_ENTITIES),
+    floatValue: new Int32Array(MAX_ENTITIES),
+    floatLife: new Float32Array(MAX_ENTITIES),
+    floatMaxLife: new Float32Array(MAX_ENTITIES),
+    floatX: new Float32Array(MAX_ENTITIES),
+    floatY: new Float32Array(MAX_ENTITIES),
+    floatZ: new Float32Array(MAX_ENTITIES),
+    floatKind: new Uint8Array(MAX_ENTITIES),
     displayName: Array.from({ length: MAX_ENTITIES }, () => ''),
     spriteKey: Array.from({ length: MAX_ENTITIES }, () => ''),
     unitId: Array.from({ length: MAX_ENTITIES }, () => ''),
@@ -374,6 +384,12 @@ function clearEntityArrays(world: World): void {
   world.fxKind.fill(0);
   world.fxLife.fill(0);
   world.fxMaxLife.fill(0);
+  world.posX.fill(0);
+  world.posY.fill(0);
+  world.posZ.fill(0);
+  world.homeX.fill(0);
+  world.homeY.fill(0);
+  world.homeZ.fill(0);
   world.uvOffsetX.fill(0);
   world.uvOffsetY.fill(0);
   world.uvScaleX.fill(1);
@@ -383,14 +399,25 @@ function clearEntityArrays(world: World): void {
   world.starTier.fill(0);
   world.speed.fill(0);
   world.actionGauge.fill(0);
-  world.timingState.fill(ActionTimingState.Idle);
-  world.timingClock.fill(0);
-  world.commandResult.fill(CommandResult.Unresolved);
+  world.actionState.fill(ActionAnimState.Idle);
+  world.actionClock.fill(0);
+  world.actionKind.fill(0);
+  world.actionResolved.fill(0);
+  world.attackCooldown.fill(0);
+  world.mana.fill(0);
   world.targetEntity.fill(-1);
-  world.blockWindowBonus.fill(0);
   world.carriesRelic.fill(0);
   world.gaugeFillCount.fill(0);
   world.lastAttacker.fill(-1);
+  world.animId.fill(0);
+  world.animClock.fill(0);
+  world.floatValue.fill(0);
+  world.floatLife.fill(0);
+  world.floatMaxLife.fill(0);
+  world.floatX.fill(0);
+  world.floatY.fill(0);
+  world.floatZ.fill(0);
+  world.floatKind.fill(0);
   world.displayName.fill('');
   world.spriteKey.fill('');
   world.unitId.fill('');

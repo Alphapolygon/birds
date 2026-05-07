@@ -1,6 +1,6 @@
-import type { RelicId, TimingRelicId } from './types';
+import type { RelicId, AutoRelicId } from './types';
 
-export const TIMING_RELIC_IDS: TimingRelicId[] = ['greased_feathers', 'hourglass_shard', 'mirror_shield', 'combo_battery', 'cursed_weights'];
+export const AUTO_RELIC_IDS: AutoRelicId[] = ['greased_feathers', 'hourglass_shard', 'mirror_shield', 'combo_battery', 'cursed_weights'];
 
 export const RELIC_BITS: Record<RelicId, number> = {
   greased_feathers: 1 << 0,
@@ -9,7 +9,7 @@ export const RELIC_BITS: Record<RelicId, number> = {
   combo_battery: 1 << 3,
   cursed_weights: 1 << 4,
 
-  // Legacy tactical relic ids are kept so older source files still type-check while the active battle flow uses the timing relics above.
+  // Legacy tactical relic ids are kept so older source files still type-check while the active battle flow uses the auto-battler relics above.
   brimstone_feather: 1 << 8,
   rubberized_yolk: 1 << 9,
   cluster_core: 1 << 10,
@@ -39,11 +39,11 @@ export const RELIC_NAMES: Record<RelicId, string> = {
 };
 
 export const RELIC_DESCRIPTIONS: Record<RelicId, string> = {
-  greased_feathers: 'Widens timed-hit and timed-block windows by 50%.',
-  hourglass_shard: 'Perfect hits refund 40% Action Gauge after the attack resolves.',
-  mirror_shield: 'Perfect blocks reflect 50% of incoming damage back to the attacker.',
-  combo_battery: 'Perfect hits and blocks generate +2 Party Combo instead of +1.',
-  cursed_weights: '+50% base attack, but this bird cannot trigger Perfect Blocks.',
+  greased_feathers: 'Reduces this bird’s attack cooldown slightly.',
+  hourglass_shard: 'Auto-attacks refund part of this bird’s action gauge.',
+  mirror_shield: 'Reflects a small amount of incoming damage back to attackers.',
+  combo_battery: 'Increases this bird’s mana and combat resource gains.',
+  cursed_weights: '+50% base attack, but this bird is slower to act.',
   brimstone_feather: 'Legacy tactical relic: row raycast attack.',
   rubberized_yolk: 'Legacy tactical relic: push on hit.',
   cluster_core: 'Legacy tactical relic: extra explosion projectiles.',
@@ -55,7 +55,7 @@ export const RELIC_DESCRIPTIONS: Record<RelicId, string> = {
   golden_magnet: 'Legacy tactical relic: Golden Eggs drift toward player.',
 };
 
-export const RELIC_IDS = TIMING_RELIC_IDS;
+export const RELIC_IDS = AUTO_RELIC_IDS;
 
 export function relicNameFromBit(bit: number): string {
   const id = (Object.keys(RELIC_BITS) as RelicId[]).find((relicId) => RELIC_BITS[relicId] === bit);
@@ -66,8 +66,8 @@ export function listRelicNames(mask: number): string[] {
   return (Object.keys(RELIC_BITS) as RelicId[]).filter((id) => (mask & RELIC_BITS[id]) !== 0).map((id) => RELIC_NAMES[id]);
 }
 
-export function randomTimingRelicBit(mask = 0): number {
-  const missing = TIMING_RELIC_IDS.map((id) => RELIC_BITS[id]).filter((bit) => (mask & bit) === 0);
-  const pool = missing.length > 0 ? missing : TIMING_RELIC_IDS.map((id) => RELIC_BITS[id]);
+export function randomAutoRelicBit(mask = 0): number {
+  const missing = AUTO_RELIC_IDS.map((id) => RELIC_BITS[id]).filter((bit) => (mask & bit) === 0);
+  const pool = missing.length > 0 ? missing : AUTO_RELIC_IDS.map((id) => RELIC_BITS[id]);
   return pool[Math.floor(Math.random() * pool.length)] ?? RELIC_BITS.greased_feathers;
 }

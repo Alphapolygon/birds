@@ -1,13 +1,18 @@
-import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
+import { Canvas, type ThreeEvent, useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { OrthographicCamera, type Camera } from 'three';
+
+import { ActionAnimState } from '../game/types';
 import type { BattleEngine } from '../game/ecs/engine';
 import { useGameStore } from '../store/useGameStore';
 import { EntityBatches } from './EntityBatches';
 import { ShieldRings } from './ShieldRings';
 import { SlotGuides } from './SlotGuides';
 import { UnitShadows } from './UnitShadows';
+import { HealthCircles } from './HealthCircles';
+import { FloatingDamageLayer } from './FloatingDamageLayer';
 import { VfxLayer } from './VfxLayer';
+import { slotWorldPosition } from './sceneMath';
 import { createWebGpuRenderer } from './webgpuRenderer';
 
 type BattleCanvasProps = {
@@ -20,12 +25,11 @@ export function BattleCanvas({ engine }: BattleCanvasProps) {
   const battleId = useGameStore((state) => state.battleId);
   const territoryId = useGameStore((state) => state.selectedTerritoryId ?? '');
   usePrepareRound(engine, phase, bossRule, territoryId, battleId);
-
   return (
     <Canvas
       className="battle-canvas"
       orthographic
-      camera={{ position: [0, 0, 10], zoom: 80, near: 0.1, far: 100 }}
+      camera={{ position: [0, 0, 10], zoom: 82, near: 0.1, far: 100 }}
       gl={createWebGpuRenderer as any}
     >
       <SceneRuntime engine={engine} />
@@ -40,17 +44,18 @@ function SceneRuntime({ engine }: { engine: BattleEngine }) {
   });
   return (
     <group>
-      <DragSurface engine={engine} /> {/* <-- Brought this back! */}
+      <DragSurface engine={engine} />
       <SlotGuides engine={engine} />
       <UnitShadows engine={engine} />
+      <HealthCircles engine={engine} />
       <EntityBatches engine={engine} />
       <ShieldRings engine={engine} />
       <VfxLayer engine={engine} />
+      <FloatingDamageLayer engine={engine} />
     </group>
   );
 }
 
-// The invisible plane that catches your drag-and-drop mouse events
 function DragSurface({ engine }: { engine: BattleEngine }) {
   const onPointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (engine.world.draggedEntity < 0) return;
@@ -64,23 +69,39 @@ function DragSurface({ engine }: { engine: BattleEngine }) {
   };
   return (
     <mesh position={[0, -0.05, -0.35]} onPointerMove={onPointerMove} onPointerUp={onPointerUp} renderOrder={0}>
-      <planeGeometry args={[8.8, 5.2]} />
+      <planeGeometry args={[9.6, 6.0]} />
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
     </mesh>
   );
 }
 
 function updateCamera(camera: Camera, engine: BattleEngine, delta: number): void {
-  // Zoom in slightly when combat starts for a better view of the action!
-  const targetZoom = engine.world.combatStarted === 1 ? 88 : 80;
+  const active = activeCombatFocus(engine);
+  const targetZoom = active ? 96 : engine.world.combatStarted === 1 ? 84 : 80;
+  const targetX = active ? activeCameraX(engine) : 0;
   const targetY = engine.world.combatStarted === 1 ? 0 : -0.18;
   const lerp = 1 - Math.pow(0.001, Math.min(0.05, delta));
-  
+  camera.position.x += (targetX - camera.position.x) * lerp;
   camera.position.y += (targetY - camera.position.y) * lerp;
   if (camera instanceof OrthographicCamera) {
     camera.zoom += (targetZoom - camera.zoom) * lerp;
     camera.updateProjectionMatrix();
   }
+}
+
+
+function activeCombatFocus(engine: BattleEngine): boolean {
+  const actor = engine.world.activeEntity;
+  return actor >= 0 && engine.world.active[actor] === 1 && engine.world.actionState[actor] !== ActionAnimState.Idle;
+}
+
+function activeCameraX(engine: BattleEngine): number {
+  const actor = engine.world.activeEntity;
+  const target = engine.world.activeTarget;
+  if (actor < 0 || target < 0) return 0;
+  const a = slotWorldPosition(engine.world.formationSlot[actor]);
+  const b = slotWorldPosition(engine.world.formationSlot[target]);
+  return (a[0] + b[0]) * 0.5;
 }
 
 function usePrepareRound(engine: BattleEngine, phase: string, bossRule: Parameters<BattleEngine['prepareRound']>[0]['bossRule'], territoryId: string, battleId: number): void {

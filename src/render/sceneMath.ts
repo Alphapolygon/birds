@@ -5,8 +5,13 @@ export const GRID_TILT_X = -Math.PI / 4;
 export const GRID_OPACITY = 0.2;
 export const GRID_GROUP_POSITION: [number, number, number] = [0, -1.05, 0];
 
-export function worldX(logicalX: number): number { return logicalX * TILE_SIZE - X_OFFSET; }
-export function worldY(logicalY: number): number { return Y_OFFSET - logicalY * TILE_SIZE; }
+export function worldX(logicalX: number): number {
+  return logicalX * TILE_SIZE - X_OFFSET;
+}
+
+export function worldY(logicalY: number): number {
+  return Y_OFFSET - logicalY * TILE_SIZE;
+}
 
 export function tileGridPosition(x: number, y: number, localZ = 0): [number, number, number] {
   return [worldX(x), worldY(y), localZ];
@@ -20,7 +25,6 @@ export function spriteWorldPosition(x: number, y: number, localZ = 0.35): [numbe
   return tileWorldPosition(x, y, localZ);
 }
 
-// Our new perspectives now flow directly through these functions
 export function slotWorldPosition(slot: number, lift = 0): [number, number, number] {
   return slotPosition(slot, lift);
 }
@@ -29,10 +33,11 @@ export function slotStagePosition(slot: number, lift = 0): [number, number, numb
   return slotWorldPosition(slot, lift);
 }
 
-export function entityStagePosition(world: { formationSlot: Int8Array; draggedEntity?: number; dragX?: number; dragY?: number; dragZ?: number }, entity: number, lift = 0): [number, number, number] {
+export function entityStagePosition(world: { formationSlot: Int8Array; posX?: Float32Array; posY?: Float32Array; posZ?: Float32Array; draggedEntity?: number; dragX?: number; dragY?: number; dragZ?: number }, entity: number, lift = 0): [number, number, number] {
   if (world.draggedEntity === entity && world.dragX !== undefined && world.dragY !== undefined && world.dragZ !== undefined) {
     return [world.dragX, world.dragY, world.dragZ + lift];
   }
+  if (world.posX && world.posY && world.posZ) return [world.posX[entity], world.posY[entity], world.posZ[entity] + lift];
   return slotWorldPosition(world.formationSlot[entity], lift);
 }
 

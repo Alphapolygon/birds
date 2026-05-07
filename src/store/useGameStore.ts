@@ -42,6 +42,7 @@ type GameStore = {
   startRun: () => void;
   startDraft: () => void;
   startCombatPhase: () => void;
+  returnToPrepPhase: () => void;
   selectTerritory: (territoryId: string) => void;
   chooseBird: (bird: BirdId) => void;
   setBossRule: (rule: BossRule) => void;
@@ -82,6 +83,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }),
   startDraft: () => startPrepForSelectedTerritory(set, get),
   startCombatPhase: () => set({ phase: 'battle', campaignMessage: 'Auto-battle is resolving.' }),
+  returnToPrepPhase: () => set((state) => ({ phase: 'prep', campaignMessage: 'Round won. Spend gold, merge units, reposition, then start the next fight.', battleVersion: state.battleVersion + 1 })),
   selectTerritory: (territoryId) => selectTerritory(set, get, territoryId),
   chooseBird: () => undefined,
   setBossRule: (bossRule) => set({ bossRule }),
@@ -144,11 +146,12 @@ function completeBattle(set: StoreSet, get: StoreGet, report: BattleReport): voi
   const territoryId = report.territoryId || state.selectedTerritoryId;
   const territory = state.territories.find((candidate) => candidate.id === territoryId) ?? selectedTerritory(state);
   const meta = applyBattleReport(state.birdProgress, report, territory?.rewardExp ?? 0);
-  const territories = report.victory && territory ? conquerTerritory(state.territories, territory.id) : state.territories;
+  const victoryConquers = report.victory && report.mapBattleComplete;
+  const territories = victoryConquers && territory ? conquerTerritory(state.territories, territory.id) : state.territories;
   const conqueredAll = territories.every((candidate) => candidate.owner === 'bird');
   const stillAlive = report.playerHp > 0;
-  const phase = nextCampaignPhase(report.victory, conqueredAll, stillAlive);
-  const campaignMessage = campaignResultMessage(report.victory, conqueredAll, stillAlive, territory?.name ?? 'the territory', report.playerHp, report.playerGold);
+  const phase = nextCampaignPhase(victoryConquers, conqueredAll, stillAlive);
+  const campaignMessage = campaignResultMessage(victoryConquers, conqueredAll, stillAlive, territory?.name ?? 'the territory', report.playerHp, report.playerGold);
   set({
     phase,
     territories,

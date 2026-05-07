@@ -2,6 +2,7 @@ import { listRelicNames } from '../game/relicCatalog';
 import { UNIT_CATALOG } from '../game/unitCatalog';
 import { BossRule, type BirdId } from '../game/types';
 import { availableBirdIds, territoryIsSelectable, useGameStore, type BirdProgress, type Territory } from '../store/useGameStore';
+import { AtlasIcon } from './AtlasIcon';
 
 export function WorldMapPanel() {
   const phase = useGameStore((state) => state.phase);
@@ -41,15 +42,18 @@ function TerritoryMap({ territories, onPick }: { territories: Territory[]; onPic
 
 function TerritoryButton({ territory, territories, onPick }: { territory: Territory; territories: Territory[]; onPick: (id: string) => void }) {
   const selectable = territoryIsSelectable(territory, territories);
+  const boss = territory.bossRule !== BossRule.None;
   return (
     <button
-      className={`territory-node ${territory.owner} ${selectable ? 'selectable' : ''}`}
+      className={`territory-node ${territory.owner} ${selectable ? 'selectable' : ''} ${boss ? 'has-boss' : ''}`}
       disabled={!selectable}
       onClick={() => onPick(territory.id)}
       style={{ gridRow: territory.row + 1, gridColumn: territory.col + 1 }}
     >
+      {boss ? <span className="territory-boss-icon"><AtlasIcon spriteKey="pig-boss" size={42} /></span> : null}
       <strong>{territory.name}</strong>
       <span>{territory.owner === 'bird' ? 'Liberated' : selectable ? 'Attackable' : 'Pig-held'}</span>
+      {boss ? <em className="territory-boss-tag">Boss</em> : null}
       <small>{bossRuleLabel(territory.bossRule)}</small>
     </button>
   );

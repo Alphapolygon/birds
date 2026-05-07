@@ -193,3 +193,17 @@ function canPassThrough(world: World, entity: number, occupant: number): boolean
   if (world.unitId[entity] !== 'hal') return false;
   return world.faction[occupant] === Faction.Pig;
 }
+
+export function footprintEdgeDistance(world: World, a: number, b: number): number {
+  const dx = Math.max(0, Math.abs(world.posX[a] - world.posX[b]) - footprintHalfWidth(world, a) - footprintHalfWidth(world, b));
+  const dy = Math.max(0, Math.abs(world.posY[a] - world.posY[b]) - footprintHalfHeight(world, a) - footprintHalfHeight(world, b));
+  return Math.hypot(dx, dy);
+}
+
+function footprintHalfWidth(world: World, entity: number): number {
+  return 0.26 * Math.max(1, world.sizeW[entity]) * (1 + Math.max(0, world.starTier[entity] - 1) * 0.18);
+}
+
+function footprintHalfHeight(world: World, entity: number): number {
+  return 0.2 * Math.max(1, world.sizeH[entity]) * (1 + Math.max(0, world.starTier[entity] - 1) * 0.18);
+}
