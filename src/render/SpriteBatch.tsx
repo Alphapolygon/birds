@@ -4,6 +4,7 @@ import {
   DynamicDrawUsage,
   InstancedBufferAttribute,
   InstancedMesh,
+  LinearFilter,
   Matrix4,
   NearestFilter,
   Object3D,
@@ -56,8 +57,8 @@ export function SpriteBatch({ engine }: SpriteBatchProps) {
 function loadAtlasTexture(): Texture {
   const texture = new TextureLoader().load(atlasImage);
   texture.colorSpace = SRGBColorSpace;
-  texture.magFilter = NearestFilter;
-  texture.minFilter = NearestFilter;
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearFilter;
   return texture;
 }
 

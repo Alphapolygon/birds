@@ -33,11 +33,12 @@ export function slotStagePosition(slot: number, lift = 0): [number, number, numb
   return slotWorldPosition(slot, lift);
 }
 
-export function entityStagePosition(world: { formationSlot: Int8Array; posX?: Float32Array; posY?: Float32Array; posZ?: Float32Array; draggedEntity?: number; dragX?: number; dragY?: number; dragZ?: number }, entity: number, lift = 0): [number, number, number] {
-  if (world.draggedEntity === entity && world.dragX !== undefined && world.dragY !== undefined && world.dragZ !== undefined) {
+export function entityStagePosition(world: any, entity: number, lift = 0): [number, number, number] {
+  if (world.draggedEntity === entity && world.dragX !== undefined) {
     return [world.dragX, world.dragY, world.dragZ + lift];
   }
-  if (world.posX && world.posY && world.posZ) return [world.posX[entity], world.posY[entity], world.posZ[entity] + lift];
+  // Standard Auto-Chess real-time position tracking
+  if (world.posX && world.posY) return [world.posX[entity], world.posY[entity], world.posZ[entity] + lift];
   return slotWorldPosition(world.formationSlot[entity], lift);
 }
 
