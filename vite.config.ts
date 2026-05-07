@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // Matches your repo name: https://github.com/Alphapolygon/birds
+  // This must match your repo name exactly: https://github.com/Alphapolygon/birds
   base: '/birds/', 
   build: {
     rollupOptions: {
@@ -15,6 +15,5 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
   },
 });
