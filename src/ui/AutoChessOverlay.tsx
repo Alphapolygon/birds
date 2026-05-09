@@ -18,8 +18,13 @@ export function AutoChessOverlay({ engine }: AutoChessOverlayProps) {
   const state = engine.getAutoChessState();
   const isPrep = phase === 'prep' && !state.combatStarted && !state.battleEnded;
 
-  useEffect(() => setShopOpen(false), [battleId, state.roundNumber]);
-  useEffect(() => { if (state.combatStarted || state.battleEnded) setShopOpen(false); }, [state.combatStarted, state.battleEnded]);
+  useEffect(() => {
+    if (isPrep) setShopOpen(true);
+  }, [isPrep, state.roundNumber, battleId]);
+
+  useEffect(() => {
+    if (state.combatStarted || state.battleEnded) setShopOpen(false);
+  }, [state.combatStarted, state.battleEnded]);
 
   const startCombat = () => {
     if (engine.startCombatRound()) {
@@ -111,7 +116,8 @@ function beginBenchCardDrag(event: ReactPointerEvent<HTMLDivElement>, engine: Ba
     engine.dropDraggedUnitFromClient(upEvent.clientX, upEvent.clientY);
   }
 
-  function handleCancel(): void {
+  function handleCancel(cancelEvent: PointerEvent): void {
+    cancelEvent.preventDefault();
     cleanup();
     engine.cancelDrag();
   }
@@ -124,7 +130,7 @@ function beginBenchCardDrag(event: ReactPointerEvent<HTMLDivElement>, engine: Ba
 
   window.addEventListener('pointermove', handleMove, { passive: false });
   window.addEventListener('pointerup', handleUp, { passive: false });
-  window.addEventListener('pointercancel', handleCancel);
+  window.addEventListener('pointercancel', handleCancel, { passive: false });
 }
 
 function CombatStatus({ engine }: { engine: BattleEngine }) {
@@ -142,6 +148,10 @@ function ShopPopup({ engine, onClose }: { engine: BattleEngine; onClose: () => v
   const state = engine.getAutoChessState();
   const canReroll = state.playerGold >= REROLL_COST;
   const slots = engine.getShopSlots();
+  const bench = engine.getBenchUnits();
+  const board = engine.getBoardUnits();
+  const fullRoster = [...board, ...bench];
+
   return (
     <div className="shop-popup-backdrop" role="presentation">
       <section className="shop-popup panel playing-card-shop" role="dialog" aria-modal="false" aria-label="Flock shop">
@@ -155,11 +165,29 @@ function ShopPopup({ engine, onClose }: { engine: BattleEngine; onClose: () => v
         <div className="shop-popup-meta">
           <span>{UNIT_COST}g each</span>
           <span>3 matching cards auto-merge</span>
-          <span>2-Star and 3-Star units gain stats without changing size</span>
         </div>
         <div className="shop-popup-grid card-shop-grid">
           {slots.map((slot) => <ShopCard key={slot.index} slot={slot} disabled={slot.empty || state.playerGold < UNIT_COST} onBuy={() => engine.buyFromShop(slot.index)} />)}
         </div>
+
+        <div className="roster-strip compact shop-roster-strip">
+          <div className="roster-title">
+            <strong>Your Current Flock</strong>
+            <span>Board: {board.length}/{state.activeSlots.length} | Bench: {bench.length}/{state.benchSlots.length}</span>
+          </div>
+          <div className="slot-card-row shop-roster-row">
+            {fullRoster.length === 0 ? <p className="muted roster-empty">Your roster is empty.</p> : fullRoster.map((unit) => (
+              <div key={unit.id} className="slot-card filled shop-roster-card">
+                <AtlasIcon spriteKey={unit.spriteKey} size={38} />
+                <div>
+                  <strong>{unit.name}</strong>
+                  <small>{'★'.repeat(Math.max(1, unit.starTier))}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="shop-popup-actions">
           <button type="button" onClick={() => engine.rerollShop()} disabled={!canReroll}>Reroll {REROLL_COST}g</button>
           <button type="button" className={state.shopLocked ? 'active-action' : 'ghost'} onClick={() => engine.toggleShopLock()}>{state.shopLocked ? 'Shop Locked' : 'Lock Shop'}</button>

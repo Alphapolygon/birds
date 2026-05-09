@@ -1,13 +1,13 @@
-import { BOSS_ROUND_NUMBER, GRID_COLS, MAP_BATTLE_ROUNDS, TILE_COUNT } from '../constants';
+import { BOSS_ROUND_NUMBER, GRID_COLS, GRID_ROWS, MAP_BATTLE_ROUNDS, TILE_SIZE, X_OFFSET, Y_OFFSET } from '../constants';
 import {
   ACTIVE_BOARD_SLOTS,
   BENCH_SLOTS,
   ENEMY_BOARD_SLOTS,
   closestActiveBoardSlot,
+  closestPlayerSlot,
   isActiveBoardSlot,
   isBenchSlot,
   isEnemyBoardSlot,
-  gridStagePosition,
   isPlayerFormationSlot,
   slotPosition,
 } from '../formationSlots';
@@ -51,7 +51,6 @@ import {
   slotOccupant,
   spawnUnitInSlot,
 } from './spawn';
-import { inBounds, manhattan, tileIndex } from './grid';
 import { clearDrag, createWorld, drainEvents, emitEvent, isAlive as worldEntityIsAlive, type World } from './world';
 
 export const ACTION_GAUGE_MAX = 100;
@@ -161,7 +160,6 @@ const BIRD_SET = new Set<string>(BIRD_IDS);
 
 export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   const world = createWorld();
-  const viewport = { width: 1, height: 1, cameraX: 0, cameraY: 0, zoom: 82 };
 
   function start(seed: BattleSeed): void {
     initializeBattle(world, seed);
@@ -273,36 +271,24 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   function dropDraggedUnit(x: number, y: number): void {
     const entity = world.draggedEntity;
     if (entity < 0) return;
-    const slot = closestActiveBoardSlot(x, y);
+    const slot = closestPlayerSlot(x, y);
     clearDrag(world);
-    if (slot === null) {
-      snapEntityToSlot(world, entity, world.formationSlot[entity]);
-      return;
-    }
     moveUnitToSlot(entity, slot);
   }
 
-  function setViewport(width: number, height: number, cameraX: number, cameraY: number, zoom: number): void {
-    viewport.width = Math.max(1, width);
-    viewport.height = Math.max(1, height);
-    viewport.cameraX = cameraX;
-    viewport.cameraY = cameraY;
-    viewport.zoom = Math.max(1, zoom);
-  }
-
-  function updateDragFromClient(clientX: number, clientY: number, z = 0.82): void {
-    const point = stagePointFromClient(clientX, clientY);
-    if (!point) return;
+  function updateDragFromClient(clientX: number, clientY: number, z = 0.86): void {
+    const point = clientToStagePoint(clientX, clientY);
     updateDragPosition(point.x, point.y, z);
   }
 
   function dropDraggedUnitFromClient(clientX: number, clientY: number): void {
-    const point = stagePointFromClient(clientX, clientY);
-    if (!point) {
-      cancelDrag();
-      return;
-    }
-    dropDraggedUnit(point.x, point.y);
+    const entity = world.draggedEntity;
+    if (entity < 0) return;
+    const point = clientToStagePoint(clientX, clientY);
+    const targetSlot = closestActiveBoardSlot(point.x, point.y);
+    clearDrag(world);
+    if (targetSlot === null) return;
+    moveUnitToSlot(entity, targetSlot);
   }
 
   function cancelDrag(): void {
@@ -408,7 +394,6 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     beginDragUnit,
     updateDragPosition,
     dropDraggedUnit,
-    setViewport,
     updateDragFromClient,
     dropDraggedUnitFromClient,
     cancelDrag,
@@ -440,8 +425,9 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
   function tickAutoCombat(delta: number): void {
     tickBossRule(delta);
-    tickGridMovement(delta);
+    syncGridOccupants();
     tickUnitActions(delta);
+    tickMovement(delta);
     syncCombatSprites();
   }
 
@@ -468,7 +454,7 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     const interval = attackInterval(entity);
     world.attackCooldown[entity] = Math.max(0, world.attackCooldown[entity] - delta * cooldownRate(entity));
     world.actionGauge[entity] = Math.max(0, Math.min(ACTION_GAUGE_MAX, (1 - world.attackCooldown[entity] / interval) * ACTION_GAUGE_MAX));
-    if (isGridHopInProgress(entity) || world.attackCooldown[entity] > 0 || !inAttackRange(entity, target)) return;
+    if (world.attackCooldown[entity] > 0 || !inAttackRange(entity, target)) return;
     if (thiefEscapesIfDone(entity)) return;
     startEntityAction(entity, target);
   }
@@ -476,12 +462,10 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   function advanceAction(entity: number, delta: number): void {
     const scaled = delta * animationTimeScale();
     world.actionClock[entity] += scaled;
-    if (world.activeEntity === entity) world.activeActionClock = world.actionClock[entity];
     const kind = world.actionKind[entity] as AutoActionKind;
     if ((world.actionState[entity] as ActionAnimState) === ActionAnimState.Windup && world.actionResolved[entity] === 0 && world.actionClock[entity] >= AUTO_ATTACK_IMPACT_SECONDS) {
       resolveEntityAction(entity, kind);
       world.actionResolved[entity] = 1;
-      if (world.activeEntity === entity) world.activeDamageResolved = 1;
       world.actionState[entity] = ActionAnimState.Recovery;
       world.actionClock[entity] = 0;
       syncEntityAtlasFrame(world, entity);
@@ -492,15 +476,10 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
   function startEntityAction(actor: number, target: number): void {
     world.selectedEntity = actor;
-    world.activeEntity = actor;
-    world.activeTarget = target;
-    world.activeActionClock = 0;
-    world.activeDamageResolved = 0;
     world.actionState[actor] = ActionAnimState.Windup;
     world.actionClock[actor] = 0;
     world.actionResolved[actor] = 0;
     world.actionKind[actor] = world.mana[actor] >= MANA_MAX ? AutoActionKind.Special : AutoActionKind.Attack;
-    world.activeActionKind = world.actionKind[actor] as AutoActionKind;
     world.targetEntity[actor] = target;
     maybeRandomizeTimeWarp();
     playAttackAnimation(world, actor, target, world.actionKind[actor] === AutoActionKind.Special);
@@ -535,180 +514,95 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     world.actionResolved[entity] = 0;
     world.actionKind[entity] = AutoActionKind.None;
     world.targetEntity[entity] = -1;
-    if (world.activeEntity === entity) {
-      world.activeEntity = -1;
-      world.activeTarget = -1;
-      world.activeActionKind = AutoActionKind.None;
-      world.activeActionClock = 0;
-      world.activeDamageResolved = 0;
-    }
     if (world.attackCooldown[entity] <= 0) world.attackCooldown[entity] = nextAttackCooldown(entity);
     world.actionGauge[entity] = Math.max(0, Math.min(ACTION_GAUGE_MAX, (1 - world.attackCooldown[entity] / attackInterval(entity)) * ACTION_GAUGE_MAX));
     syncEntityAtlasFrame(world, entity);
   }
 
-  function tickGridMovement(delta: number): void {
-    syncGridOccupants();
-    advanceGridHops(delta);
-    const reserved = buildReservedGrid();
+  function tickMovement(delta: number): void {
+    settleGridPositions(delta);
+    const reserved = new Int32Array(GRID_COLS * GRID_ROWS);
+    reserved.fill(-1);
+
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
       if (!isCombatParticipant(entity)) continue;
       if ((world.actionState[entity] as ActionAnimState) !== ActionAnimState.Idle) continue;
-      if (isGridHopInProgress(entity)) continue;
+
       const target = world.targetEntity[entity] >= 0 && isAlive(world.targetEntity[entity]) ? world.targetEntity[entity] : nearestEnemyTarget(entity);
-      world.targetEntity[entity] = target;
-      if (target < 0 || inAttackRange(entity, target)) continue;
-      const step = nextGridStep(entity, target, reserved);
-      if (step) startGridHop(entity, step.x, step.y, reserved);
+      if (target < 0) continue;
+      if (inAttackRange(entity, target)) continue;
+      if (!isSettledOnGrid(entity)) continue;
+
+      const next = nextReservedStep(entity, target, reserved);
+      if (!next) continue;
+      reserveGridTile(reserved, next.x, next.y, entity);
+      world.x[entity] = next.x;
+      world.y[entity] = next.y;
+      writeCombatHome(entity);
     }
+
+    settleGridPositions(delta);
+    syncGridOccupants();
   }
 
-  function syncGridOccupants(): void {
-    world.gridOccupant.fill(-1);
+  function settleGridPositions(delta: number): void {
+    const t = Math.min(1, delta * 7.5);
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
       if (!isCombatParticipant(entity)) continue;
-      if (!inBounds(world.x[entity], world.y[entity])) continue;
-      world.gridOccupant[tileIndex(world.x[entity], world.y[entity])] = entity;
+      writeCombatHome(entity);
+      world.posX[entity] += (world.homeX[entity] - world.posX[entity]) * t;
+      world.posY[entity] += (world.homeY[entity] - world.posY[entity]) * t;
+      world.posZ[entity] += (world.homeZ[entity] - world.posZ[entity]) * t;
     }
   }
 
-  function advanceGridHops(delta: number): void {
-    for (let entity = 0; entity < world.nextEntity; entity += 1) {
-      if (!isCombatParticipant(entity) || !isGridHopInProgress(entity)) continue;
-      advanceGridHop(entity, delta);
-    }
-  }
+  function nextReservedStep(entity: number, target: number, reserved: Int32Array): { x: number; y: number } | null {
+    const currentDistance = gridDistance(entity, target);
+    const minRange = Math.max(1, world.rangeMin[entity]);
+    const maxRange = Math.max(minRange, world.rangeMax[entity]);
+    const wantsSpace = currentDistance < minRange;
+    const candidates = [
+      { x: world.x[entity] + 1, y: world.y[entity] },
+      { x: world.x[entity] - 1, y: world.y[entity] },
+      { x: world.x[entity], y: world.y[entity] + 1 },
+      { x: world.x[entity], y: world.y[entity] - 1 },
+    ];
 
-  function advanceGridHop(entity: number, delta: number): void {
-    const [targetX, targetY, targetZ] = gridStagePosition(world.pendingX[entity], world.pendingY[entity]);
-    const dx = targetX - world.posX[entity];
-    const dy = targetY - world.posY[entity];
-    const distance = Math.hypot(dx, dy);
-    const maxStep = gridHopSpeed(entity) * delta;
-    if (distance <= Math.max(0.012, maxStep)) {
-      world.posX[entity] = targetX;
-      world.posY[entity] = targetY;
-      world.posZ[entity] = targetZ;
-      world.homeX[entity] = targetX;
-      world.homeY[entity] = targetY;
-      world.homeZ[entity] = targetZ;
-      world.x[entity] = world.pendingX[entity];
-      world.y[entity] = world.pendingY[entity];
-      return;
-    }
-    const ratio = maxStep / distance;
-    world.posX[entity] += dx * ratio;
-    world.posY[entity] += dy * ratio;
-    world.posZ[entity] += (targetZ + 0.14 - world.posZ[entity]) * Math.min(1, delta * 18);
-  }
-
-  function buildReservedGrid(): Int32Array {
-    const reserved = new Int32Array(TILE_COUNT);
-    reserved.fill(-1);
-    for (let entity = 0; entity < world.nextEntity; entity += 1) {
-      if (!isCombatParticipant(entity)) continue;
-      reserveTile(reserved, world.x[entity], world.y[entity], entity);
-      if (isGridHopInProgress(entity)) reserveTile(reserved, world.pendingX[entity], world.pendingY[entity], entity);
-    }
-    return reserved;
-  }
-
-  function reserveTile(reserved: Int32Array, x: number, y: number, entity: number): void {
-    if (inBounds(x, y)) reserved[tileIndex(x, y)] = entity;
-  }
-
-  function startGridHop(entity: number, x: number, y: number, reserved: Int32Array): void {
-    world.pendingX[entity] = x;
-    world.pendingY[entity] = y;
-    reserveTile(reserved, x, y, entity);
-    const [targetX, targetY, targetZ] = gridStagePosition(x, y);
-    world.homeX[entity] = targetX;
-    world.homeY[entity] = targetY;
-    world.homeZ[entity] = targetZ;
-  }
-
-  function nextGridStep(entity: number, target: number, reserved: Int32Array): { x: number; y: number } | null {
-    const startX = world.x[entity];
-    const startY = world.y[entity];
-    if (!inBounds(startX, startY)) return null;
-
-    const startIndex = tileIndex(startX, startY);
-    const visited = new Uint8Array(TILE_COUNT);
-    const previous = new Int16Array(TILE_COUNT);
-    const queue = new Int16Array(TILE_COUNT);
-    previous.fill(-1);
-    visited[startIndex] = 1;
-    queue[0] = startIndex;
-    let head = 0;
-    let tail = 1;
-    let found = -1;
-
-    while (head < tail) {
-      const current = queue[head++];
-      const cx = current % GRID_COLS;
-      const cy = Math.floor(current / GRID_COLS);
-      if (current !== startIndex && positionInAttackRange(entity, cx, cy, target)) {
-        found = current;
-        break;
-      }
-      for (const [dx, dy] of orderedDirections(entity, target, cx, cy)) {
-        const nx = cx + dx;
-        const ny = cy + dy;
-        if (!inBounds(nx, ny)) continue;
-        const nextIndex = tileIndex(nx, ny);
-        if (visited[nextIndex] === 1 || !canReserveGridTile(entity, nx, ny, reserved)) continue;
-        visited[nextIndex] = 1;
-        previous[nextIndex] = current;
-        queue[tail++] = nextIndex;
-      }
-    }
-
-    if (found < 0) return fallbackAdjacentStep(entity, target, reserved);
-    let step = found;
-    while (previous[step] !== startIndex && previous[step] >= 0) step = previous[step];
-    return { x: step % GRID_COLS, y: Math.floor(step / GRID_COLS) };
-  }
-
-  function fallbackAdjacentStep(entity: number, target: number, reserved: Int32Array): { x: number; y: number } | null {
-    const startX = world.x[entity];
-    const startY = world.y[entity];
     let best: { x: number; y: number } | null = null;
     let bestScore = Number.POSITIVE_INFINITY;
-    for (const [dx, dy] of orderedDirections(entity, target, startX, startY)) {
-      const x = startX + dx;
-      const y = startY + dy;
-      if (!canReserveGridTile(entity, x, y, reserved)) continue;
-      const score = manhattan(x, y, world.x[target], world.y[target]);
+    for (const candidate of candidates) {
+      if (!canReserveGridTile(entity, candidate.x, candidate.y, reserved)) continue;
+      const distance = Math.abs(candidate.x - world.x[target]) + Math.abs(candidate.y - world.y[target]);
+      if (!wantsSpace && distance >= currentDistance && currentDistance > maxRange) continue;
+      if (wantsSpace && distance <= currentDistance) continue;
+      const rangePenalty = distance > maxRange ? distance - maxRange : distance < minRange ? minRange - distance : 0;
+      const lanePenalty = Math.abs(candidate.y - world.y[target]) * 0.08;
+      const forwardBias = world.faction[entity] === Faction.Player ? -candidate.x * 0.01 : candidate.x * 0.01;
+      const score = rangePenalty + lanePenalty + forwardBias;
       if (score < bestScore) {
-        best = { x, y };
         bestScore = score;
+        best = candidate;
       }
     }
     return best;
   }
 
-  function orderedDirections(_entity: number, target: number, fromX: number, fromY: number): ReadonlyArray<readonly [number, number]> {
-    const directions: Array<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-    directions.sort((a, b) => {
-      const scoreA = manhattan(fromX + a[0], fromY + a[1], world.x[target], world.y[target]);
-      const scoreB = manhattan(fromX + b[0], fromY + b[1], world.x[target], world.y[target]);
-      return scoreA - scoreB;
-    });
-    return directions;
-  }
-
   function canReserveGridTile(entity: number, x: number, y: number, reserved: Int32Array): boolean {
-    if (!inBounds(x, y)) return false;
-    const reservedBy = reserved[tileIndex(x, y)];
-    return reservedBy === -1 || reservedBy === entity;
+    if (x < 0 || x >= GRID_COLS || y < 0 || y >= GRID_ROWS) return false;
+    const index = y * GRID_COLS + x;
+    const occupant = world.gridOccupant[index];
+    if (occupant >= 0 && occupant !== entity) return false;
+    const reservation = reserved[index];
+    return reservation < 0 || reservation === entity;
   }
 
-  function isGridHopInProgress(entity: number): boolean {
-    return world.pendingX[entity] !== world.x[entity] || world.pendingY[entity] !== world.y[entity];
+  function reserveGridTile(reserved: Int32Array, x: number, y: number, entity: number): void {
+    if (x >= 0 && x < GRID_COLS && y >= 0 && y < GRID_ROWS) reserved[y * GRID_COLS + x] = entity;
   }
 
-  function gridHopSpeed(entity: number): number {
-    return 4.1 + Math.max(1, world.move[entity]) * 0.24;
+  function isSettledOnGrid(entity: number): boolean {
+    writeCombatHome(entity);
+    return Math.hypot(world.homeX[entity] - world.posX[entity], world.homeY[entity] - world.posY[entity]) < 0.07;
   }
 
   function resolveSpecial(attacker: number, target: number): void {
@@ -878,16 +772,6 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     world.actionClock[entity] = 0;
     world.actionKind[entity] = AutoActionKind.None;
     world.actionResolved[entity] = 0;
-    world.targetEntity[entity] = -1;
-    world.pendingX[entity] = world.x[entity];
-    world.pendingY[entity] = world.y[entity];
-    if (world.activeEntity === entity) {
-      world.activeEntity = -1;
-      world.activeActionKind = AutoActionKind.None;
-      world.activeActionClock = 0;
-      world.activeDamageResolved = 0;
-    }
-    if (world.activeTarget === entity) world.activeTarget = -1;
     syncEntityAtlasFrame(world, entity);
     emitEvent(world, { type: 'unit_destroyed', entity, message: destroyedMessage(entity) });
   }
@@ -900,16 +784,6 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     world.faction[entity] = Faction.None;
     world.actionGauge[entity] = 0;
     world.attackCooldown[entity] = 0;
-    world.targetEntity[entity] = -1;
-    world.pendingX[entity] = world.x[entity];
-    world.pendingY[entity] = world.y[entity];
-    if (world.activeEntity === entity) {
-      world.activeEntity = -1;
-      world.activeActionKind = AutoActionKind.None;
-      world.activeActionClock = 0;
-      world.activeDamageResolved = 0;
-    }
-    if (world.activeTarget === entity) world.activeTarget = -1;
     emitEvent(world, { type: 'unit_destroyed', entity, message: `${world.displayName[entity]} escaped with the Golden Egg relic.` });
     return true;
   }
@@ -988,7 +862,10 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
       if (isCombatParticipant(entity)) {
         world.attackCooldown[entity] = initialCooldown(entity);
         world.actionGauge[entity] = Math.max(0, Math.min(ACTION_GAUGE_MAX, (1 - world.attackCooldown[entity] / attackInterval(entity)) * ACTION_GAUGE_MAX));
-        snapEntityToSlot(world, entity, world.formationSlot[entity]);
+        writeCombatHome(entity);
+        world.posX[entity] = world.homeX[entity];
+        world.posY[entity] = world.homeY[entity];
+        world.posZ[entity] = world.homeZ[entity];
       } else {
         world.attackCooldown[entity] = 0;
         world.actionGauge[entity] = 0;
@@ -1011,11 +888,10 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
       if (entity === exclude || !isAlive(entity) || world.kind[entity] !== EntityKind.Unit || world.faction[entity] !== targetFaction) continue;
       if (targetFaction === Faction.Player && !isActiveBoardSlot(world.formationSlot[entity])) continue;
       if (targetFaction === Faction.Pig && !isEnemyBoardSlot(world.formationSlot[entity])) continue;
-      const distance = gridDistance(actor, entity);
+      const distance = footprintDistance(actor, entity);
       const injuredBonus = world.hp[entity] / Math.max(1, world.maxHp[entity]);
-      const currentTargetBonus = entity === world.targetEntity[actor] ? -0.1 : 0;
-      const activeTargetBonus = entity === world.activeTarget ? -0.15 : 0;
-      const score = distance + injuredBonus * 0.15 + currentTargetBonus + activeTargetBonus;
+      const preferred = entity === world.activeTarget ? -0.25 : 0;
+      const score = distance + injuredBonus * 0.15 + preferred;
       if (score < bestScore) {
         best = entity;
         bestScore = score;
@@ -1026,11 +902,7 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
   function nearestTargetFromFaction(targetFaction: Faction): number {
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
-      if (isAlive(entity) && world.faction[entity] === targetFaction && world.kind[entity] === EntityKind.Unit) {
-        if (targetFaction === Faction.Player && !isActiveBoardSlot(world.formationSlot[entity])) continue;
-        if (targetFaction === Faction.Pig && !isEnemyBoardSlot(world.formationSlot[entity])) continue;
-        return entity;
-      }
+      if (isAlive(entity) && world.faction[entity] === targetFaction && world.kind[entity] === EntityKind.Unit) return entity;
     }
     return -1;
   }
@@ -1046,27 +918,25 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
       if (faction === Faction.Pig && !isEnemyBoardSlot(world.formationSlot[entity])) continue;
       enemies.push(entity);
     }
-    return enemies.sort((a, b) => gridDistance(actor, a) - gridDistance(actor, b)).slice(0, count);
+    return enemies.sort((a, b) => footprintDistance(actor, a) - footprintDistance(actor, b)).slice(0, count);
   }
 
   function nearbyEnemies(anchor: number, radius: number): number[] {
     const faction = world.faction[anchor] === Faction.Player ? Faction.Pig : Faction.Player;
     const result: number[] = [];
-    const gridRadius = Math.max(1, Math.ceil(radius));
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
       if (!isAlive(entity) || world.faction[entity] !== faction || world.kind[entity] !== EntityKind.Unit) continue;
-      if (gridDistance(anchor, entity) <= gridRadius) result.push(entity);
+      if (Math.hypot(world.posX[entity] - world.posX[anchor], world.posY[entity] - world.posY[anchor]) <= radius) result.push(entity);
     }
     return result;
   }
 
   function nearbyAllies(anchor: number, radius: number): number[] {
     const result: number[] = [];
-    const gridRadius = Math.max(1, Math.ceil(radius));
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
       if (!isAlive(entity) || world.faction[entity] !== world.faction[anchor] || world.kind[entity] !== EntityKind.Unit) continue;
       if (world.faction[entity] === Faction.Player && !isActiveBoardSlot(world.formationSlot[entity])) continue;
-      if (gridDistance(anchor, entity) <= gridRadius) result.push(entity);
+      if (Math.hypot(world.posX[entity] - world.posX[anchor], world.posY[entity] - world.posY[anchor]) <= radius) result.push(entity);
     }
     return result;
   }
@@ -1087,27 +957,40 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   function furthestEnemy(actor: number): number {
     const enemies = nearestEnemies(actor, 99);
     const direction = world.faction[actor] === Faction.Player ? 1 : -1;
-    return enemies.sort((a, b) => (world.x[b] - world.x[a]) * direction)[0] ?? -1;
+    return enemies.sort((a, b) => (world.posX[b] - world.posX[a]) * direction)[0] ?? -1;
   }
 
   function inAttackRange(attacker: number, target: number): boolean {
-    return positionInAttackRange(attacker, world.x[attacker], world.y[attacker], target);
-  }
-
-  function positionInAttackRange(attacker: number, x: number, y: number, target: number): boolean {
-    const distance = manhattan(x, y, world.x[target], world.y[target]);
+    const distance = gridDistance(attacker, target);
     const min = Math.max(1, world.rangeMin[attacker]);
     const max = Math.max(min, world.rangeMax[attacker]);
     return distance >= min && distance <= max;
   }
 
+  function footprintDistance(a: number, b: number): number {
+    return gridDistance(a, b);
+  }
+
   function gridDistance(a: number, b: number): number {
-    return manhattan(world.x[a], world.y[a], world.x[b], world.y[b]);
+    return Math.abs(world.x[a] - world.x[b]) + Math.abs(world.y[a] - world.y[b]);
+  }
+
+  function attackRange(entity: number): number {
+    return Math.max(1, world.rangeMax[entity]);
+  }
+
+  function halfWidth(entity: number): number {
+    return 0.26 * Math.max(1, world.sizeW[entity]);
+  }
+
+  function halfHeight(entity: number): number {
+    return 0.2 * Math.max(1, world.sizeH[entity]);
   }
 
   function attackDamage(attacker: number, target: number, multiplier: number): number { return Math.max(1, Math.ceil(modifiedAttack(attacker) * multiplier) - world.defense[target]); }
   function modifiedAttack(attacker: number): number { return hasRelic(world, attacker, 'cursed_weights') ? Math.ceil(world.attack[attacker] * 1.5) : world.attack[attacker]; }
   function specialMultiplier(attacker: number): number { return 1.65 + Math.max(0, world.starTier[attacker] - 1) * 0.32; }
+  function movementSpeed(entity: number): number { return 0.55 + Math.max(1, world.move[entity]) * 0.24 + Math.max(0, world.starTier[entity] - 1) * 0.08; }
 
   function entitySummary(entity: number): EntitySummary | null {
     if (!isAlive(entity) || world.kind[entity] !== EntityKind.Unit) return null;
@@ -1212,11 +1095,6 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     world.mana[entity] = 0;
     world.actionState[entity] = ActionAnimState.Idle;
     world.actionClock[entity] = 0;
-    world.actionKind[entity] = AutoActionKind.None;
-    world.actionResolved[entity] = 0;
-    world.targetEntity[entity] = -1;
-    world.pendingX[entity] = world.x[entity];
-    world.pendingY[entity] = world.y[entity];
     syncEntityAtlasFrame(world, entity);
   }
 
@@ -1272,7 +1150,6 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     world.combatStarted = 0;
     world.selectedEntity = -1;
     world.activeEntity = -1;
-    world.activeTarget = -1;
     world.activeActionKind = AutoActionKind.None;
     if (type === 'battle_won') {
       world.playerGold += ROUND_WIN_GOLD + world.roundNumber;
@@ -1291,6 +1168,47 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
   function syncCombatSprites(): void { for (let entity = 0; entity < world.nextEntity; entity += 1) if (world.active[entity] === 1 && world.kind[entity] === EntityKind.Unit) syncEntityAtlasFrame(world, entity); }
   function syncAllRosterFrames(): void { for (let entity = 0; entity < world.nextEntity; entity += 1) if (world.active[entity] === 1) syncEntityAtlasFrame(world, entity); }
+  function syncGridOccupants(): void {
+    world.gridOccupant.fill(-1);
+    for (let entity = 0; entity < world.nextEntity; entity += 1) {
+      if (!isCombatParticipant(entity)) continue;
+      if (world.x[entity] < 0 || world.x[entity] >= GRID_COLS || world.y[entity] < 0 || world.y[entity] >= GRID_ROWS) continue;
+      world.gridOccupant[world.y[entity] * GRID_COLS + world.x[entity]] = entity;
+    }
+  }
+
+  function writeCombatHome(entity: number): void {
+    const [x, y, z] = combatTilePosition(world.x[entity], world.y[entity], 0.32);
+    world.homeX[entity] = x;
+    world.homeY[entity] = y;
+    world.homeZ[entity] = z;
+  }
+
+  function combatTilePosition(x: number, y: number, localZ = 0): [number, number, number] {
+    const localX = x * TILE_SIZE - X_OFFSET;
+    const localY = Y_OFFSET - y * TILE_SIZE;
+    const tilt = -Math.PI / 4;
+    const tiltedY = localY * Math.cos(tilt) - localZ * Math.sin(tilt);
+    const tiltedZ = localY * Math.sin(tilt) + localZ * Math.cos(tilt);
+    return [localX, tiltedY - 1.05, tiltedZ];
+  }
+
+  function clientToStagePoint(clientX: number, clientY: number): { x: number; y: number } {
+    const fallback = { x: world.dragX || 0, y: world.dragY || 0 };
+    if (typeof document === 'undefined') return fallback;
+    const element = document.querySelector('.battle-stage canvas') ?? document.querySelector('.battle-stage');
+    const rect = element?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return fallback;
+    const zoom = world.combatStarted === 1 ? 86 : 80;
+    const cameraY = world.combatStarted === 1 ? 0 : -0.18;
+    const nx = (clientX - rect.left) / rect.width;
+    const ny = (clientY - rect.top) / rect.height;
+    return {
+      x: (nx - 0.5) * (rect.width / zoom),
+      y: (0.5 - ny) * (rect.height / zoom) + cameraY,
+    };
+  }
+
   function returnBenchToHomes(delta: number): void {
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
       if (!isPlayerRosterUnit(entity)) continue;
@@ -1302,20 +1220,6 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
       world.posZ[entity] += (z - world.posZ[entity]) * Math.min(1, delta * 12);
       syncEntityAtlasFrame(world, entity);
     }
-  }
-
-  function stagePointFromClient(clientX: number, clientY: number): { x: number; y: number } | null {
-    if (typeof document === 'undefined') return null;
-    const canvas = document.querySelector<HTMLCanvasElement>('.battle-stage canvas');
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const normalizedX = ((clientX - rect.left) / rect.width) * 2 - 1;
-    const normalizedY = -(((clientY - rect.top) / rect.height) * 2 - 1);
-    return {
-      x: viewport.cameraX + normalizedX * (viewport.width / viewport.zoom) * 0.5,
-      y: viewport.cameraY + normalizedY * (viewport.height / viewport.zoom) * 0.5,
-    };
   }
 
   function invalid(message: string): void { emitEvent(world, { type: 'invalid_action', message }); flushEvents(); }

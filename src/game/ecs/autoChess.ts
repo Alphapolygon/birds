@@ -88,6 +88,7 @@ export function healPlayerRoster(world: World): void {
     if (world.active[entity] !== 1 || world.faction[entity] !== Faction.Player) continue;
     world.hp[entity] = world.maxHp[entity];
     world.actionGauge[entity] = 0;
+    world.actionState[entity] = 0;
   }
 }
 

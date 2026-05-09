@@ -6,6 +6,7 @@ import {
   InstancedMesh,
   LinearFilter,
   Matrix4,
+  NearestFilter,
   Object3D,
   PlaneGeometry,
   SRGBColorSpace,
@@ -20,6 +21,7 @@ import { ATTACK_ANIM_SECONDS, HIT_ANIM_SECONDS, SHIELD_ANIM_SECONDS } from '../g
 import type { BattleEngine } from '../game/ecs/engine';
 import { EntityKind } from '../game/types';
 import { isBenchSlot } from '../game/formationSlots';
+import { entityStagePosition } from './sceneMath';
 import atlasImage from '../assets/sprites/INGAME_BIRDS_1.png';
 
 type SpriteBatchProps = { engine: BattleEngine };
@@ -147,7 +149,7 @@ function writeEntityUvs(world: BattleEngine['world'], entity: number, instance: 
 function writeEntityMatrix(world: BattleEngine['world'], entity: number, dummy: Object3D, elapsed: number): Matrix4 {
   const position = entityWorldPosition(world, entity);
   const anim = animationPose(world, entity, elapsed);
-  const base = spriteScale(world, entity) * anim.scale;
+  const base = spriteScale(world, entity) * perspectiveScale(world, entity) * anim.scale;
   const aspect = Math.max(0.25, world.uvAspectRatio[entity] || 1);
   dummy.position.set(position[0] + anim.x, position[1] + anim.y, position[2]);
   dummy.rotation.set(0, 0, 0);
@@ -157,14 +159,21 @@ function writeEntityMatrix(world: BattleEngine['world'], entity: number, dummy: 
 }
 
 function spriteScale(world: BattleEngine['world'], entity: number): number {
+  if (world.unitId[entity] === 'terence') return 1.18;
   if (world.kind[entity] === EntityKind.GoldenEgg) return 0.72;
   if (world.kind[entity] === EntityKind.Barricade) return 0.88;
   return 1;
 }
 
+function perspectiveScale(world: BattleEngine['world'], entity: number): number {
+  if (isBenchSlot(world.formationSlot[entity])) return 1;
+  const y = world.draggedEntity === entity ? world.dragY : world.posY[entity];
+  return Math.max(0.78, Math.min(1.24, 1.0 + (-y - 0.05) * 0.12));
+}
+
 function entityWorldPosition(world: BattleEngine['world'], entity: number): [number, number, number] {
-  if (world.draggedEntity === entity) return [world.dragX, world.dragY, world.dragZ || 0.8];
-  return [world.posX[entity], world.posY[entity] + entityLift(world, entity), world.posZ[entity]];
+  const position = entityStagePosition(world, entity, entityLift(world, entity));
+  return [position[0], position[1], position[2]];
 }
 
 function entityLift(world: BattleEngine['world'], entity: number): number {

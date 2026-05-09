@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { EntitySummary, BattleEngine } from '../game/ecs/engine';
-import { ACTION_GAUGE_MAX, MANA_MAX } from '../game/ecs/engine';
+import { ACTION_GAUGE_MAX } from '../game/ecs/engine';
 import { listRelicNames } from '../game/relicCatalog';
 import { BossRule } from '../game/types';
 import { useGameStore } from '../store/useGameStore';
@@ -42,13 +42,12 @@ export function Hud({ engine }: HudProps) {
 }
 
 function ComboMeter({ engine }: { engine: BattleEngine }) {
-  const active = engine.getEntitySummary(engine.world.activeEntity);
-  const mana = active?.mana ?? 0;
-  const ratio = Math.max(0, Math.min(100, (mana / MANA_MAX) * 100));
+  const active = engine.getBoardUnits().length;
+  const bench = engine.getBenchUnits().length;
   return (
     <div className="combo-card">
-      <div className="combo-topline"><strong>Active Mana</strong><span>{Math.round(mana)}/{MANA_MAX}</span></div>
-      <div className="combo-track"><div className="combo-fill" style={{ width: `${ratio}%` }} /></div>
+      <div className="combo-topline"><strong>Auto-Battle Roster</strong><span>{active} board / {bench} bench</span></div>
+      <div className="combo-track"><div className="combo-fill" style={{ width: `${Math.min(100, active * 12.5)}%` }} /></div>
     </div>
   );
 }

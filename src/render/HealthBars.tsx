@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { Color, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry } from 'three';
 import { MAX_ENTITIES, TILE_SIZE } from '../game/constants';
-import { MANA_MAX, type BattleEngine } from '../game/ecs/engine';
+import type { BattleEngine } from '../game/ecs/engine';
 import { isBenchSlot } from '../game/formationSlots';
 import { EntityKind, Faction } from '../game/types';
 import { entityStagePosition } from './sceneMath';
@@ -34,13 +34,13 @@ export function HealthBars({ engine }: { engine: BattleEngine }) {
 
       const pos = entityStagePosition(world, i, 0);
       const hpPct = world.hp[i] / world.maxHp[i];
-      const manaPct = world.starMax[i] > 0 ? world.mana[i] / MANA_MAX : 0;
-      const tierScale = 1;
-      const yAnchor = pos[1] - 0.45; 
+      const manaPct = world.starMax[i] > 0 ? world.mana[i] / world.starMax[i] : 0;
+      
+      const yAnchor = pos[1] - 0.45;
 
       // 1. HP Bar Fill
-      dummy.position.set(pos[0] + (hpPct - 1) * (BAR_WIDTH * tierScale * 0.5), yAnchor, pos[2] + 0.1);
-      dummy.scale.set(tierScale * hpPct, 1, 1);
+      dummy.position.set(pos[0] + (hpPct - 1) * (BAR_WIDTH * 0.5), yAnchor, pos[2] + 0.1);
+      dummy.scale.set(hpPct, 1, 1);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(count, dummy.matrix);
       meshRef.current.setColorAt(count, color.set(world.faction[i] === Faction.Player ? '#4ade80' : '#ff4d4d'));
@@ -48,8 +48,8 @@ export function HealthBars({ engine }: { engine: BattleEngine }) {
 
       // 2. Mana Bar Fill (Star Meter)
       if (world.starMax[i] > 0) {
-        dummy.position.set(pos[0] + (manaPct - 1) * (BAR_WIDTH * tierScale * 0.5), yAnchor - HP_HEIGHT - SPACING, pos[2] + 0.1);
-        dummy.scale.set(tierScale * manaPct, 1, 1);
+        dummy.position.set(pos[0] + (manaPct - 1) * (BAR_WIDTH * 0.5), yAnchor - HP_HEIGHT - SPACING, pos[2] + 0.1);
+        dummy.scale.set(manaPct, 1, 1);
         dummy.updateMatrix();
         meshRef.current.setMatrixAt(count, dummy.matrix);
         meshRef.current.setColorAt(count, color.set(manaPct >= 1 ? '#ffd166' : '#60a5fa'));

@@ -48,9 +48,10 @@ function shouldRenderShield(world: BattleEngine['world'], entity: number): boole
 function writeShieldMatrix(engine: BattleEngine, entity: number, dummy: Object3D, elapsed: number): void {
   const position = entityStagePosition(engine.world, entity, 0.38);
   const pulse = shieldPulse(engine.world, entity, elapsed);
+  const bossScale = engine.world.unitId[entity] === 'pig_boss' ? 1.2 : 1;
   dummy.position.set(position[0], position[1], position[2] + 0.2);
   dummy.rotation.set(0, 0, elapsed * 0.65);
-  dummy.scale.set(pulse, pulse, 1);
+  dummy.scale.set(bossScale * pulse, bossScale * pulse, 1);
   dummy.updateMatrix();
 }
 

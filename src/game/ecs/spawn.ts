@@ -1,4 +1,4 @@
-import { BOSS_ROUND_NUMBER, MAP_BATTLE_ROUNDS } from '../constants';
+import { BOSS_ROUND_NUMBER, GRID_COLS, MAP_BATTLE_ROUNDS, PLAYER_DEPLOY_COLS } from '../constants';
 import { randomAutoRelicBit } from '../relicCatalog';
 import { syncEntityAtlasFrame } from '../spriteAtlas';
 import { STAR_MAX_BY_UNIT, UNIT_CATALOG } from '../unitCatalog';
@@ -9,7 +9,6 @@ import {
   isActiveBoardSlot,
   isBenchSlot,
   isEnemyBoardSlot,
-  slotGridPoint,
   slotPosition,
 } from '../formationSlots';
 import { BossRule, EntityKind, Faction, TerrainType, type BattleSeed, type BirdId, type UnitId } from '../types';
@@ -100,8 +99,6 @@ export function snapEntityToSlot(world: World, entity: number, slot = world.form
   world.posY[entity] = y;
   world.posZ[entity] = z;
   setLegacyCoordinateFromSlot(world, entity, slot);
-  world.pendingX[entity] = world.x[entity];
-  world.pendingY[entity] = world.y[entity];
 }
 
 export function seedEnemyBoard(world: World, bossRule: BossRule, bossRound = false): void {
@@ -289,16 +286,23 @@ function initialGaugeForSlot(slot: number): number {
 }
 
 function setLegacyCoordinateFromSlot(world: World, entity: number, slot: number): void {
-  const gridPoint = slotGridPoint(slot);
-  if (gridPoint) {
-    world.x[entity] = gridPoint.x;
-    world.y[entity] = gridPoint.y;
+  if (isActiveBoardSlot(slot)) {
+    const index = ACTIVE_BOARD_SLOTS.indexOf(slot as (typeof ACTIVE_BOARD_SLOTS)[number]);
+    world.x[entity] = index % PLAYER_DEPLOY_COLS;
+    world.y[entity] = Math.floor(index / PLAYER_DEPLOY_COLS);
     return;
   }
   if (isBenchSlot(slot)) {
     const index = BENCH_SLOTS.indexOf(slot as (typeof BENCH_SLOTS)[number]);
     world.x[entity] = index;
     world.y[entity] = 5;
+    return;
+  }
+  if (isEnemyBoardSlot(slot)) {
+    const index = ENEMY_BOARD_SLOTS.indexOf(slot as (typeof ENEMY_BOARD_SLOTS)[number]);
+    const enemyDeployCols = 2;
+    world.x[entity] = GRID_COLS - enemyDeployCols + (index % enemyDeployCols);
+    world.y[entity] = Math.floor(index / enemyDeployCols);
   }
 }
 

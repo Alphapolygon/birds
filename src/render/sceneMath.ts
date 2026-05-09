@@ -1,8 +1,9 @@
-import { GRID_GROUP_POSITION, GRID_TILT_X, TILE_SIZE, X_OFFSET, Y_OFFSET } from '../game/constants';
-import { gridStagePosition, slotPosition } from '../game/formationSlots';
+import { TILE_SIZE, X_OFFSET, Y_OFFSET } from '../game/constants';
+import { slotPosition } from '../game/formationSlots';
 
-export { GRID_GROUP_POSITION, GRID_TILT_X } from '../game/constants';
+export const GRID_TILT_X = -Math.PI / 4;
 export const GRID_OPACITY = 0.2;
+export const GRID_GROUP_POSITION: [number, number, number] = [0, -1.05, 0];
 
 export function worldX(logicalX: number): number {
   return logicalX * TILE_SIZE - X_OFFSET;
@@ -20,8 +21,8 @@ export function tileWorldPosition(x: number, y: number, localZ = 0): [number, nu
   return applyGridTilt(tileGridPosition(x, y, localZ));
 }
 
-export function spriteWorldPosition(x: number, y: number, localZ = 0.38): [number, number, number] {
-  return gridStagePosition(x, y, localZ);
+export function spriteWorldPosition(x: number, y: number, localZ = 0.35): [number, number, number] {
+  return tileWorldPosition(x, y, localZ);
 }
 
 export function slotWorldPosition(slot: number, lift = 0): [number, number, number] {
@@ -36,6 +37,7 @@ export function entityStagePosition(world: any, entity: number, lift = 0): [numb
   if (world.draggedEntity === entity && world.dragX !== undefined) {
     return [world.dragX, world.dragY, world.dragZ + lift];
   }
+  // Standard Auto-Chess real-time position tracking
   if (world.posX && world.posY) return [world.posX[entity], world.posY[entity], world.posZ[entity] + lift];
   return slotWorldPosition(world.formationSlot[entity], lift);
 }

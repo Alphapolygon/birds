@@ -1,6 +1,5 @@
-import { useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Group, MeshBasicMaterial, RingGeometry } from 'three';
+import { useEffect, useMemo, useState } from 'react';
+import { MeshBasicMaterial, RingGeometry } from 'three';
 import type { BattleEngine } from '../game/ecs/engine';
 import { isBenchSlot } from '../game/formationSlots';
 import { EntityKind } from '../game/types';
@@ -20,22 +19,14 @@ export function HealthCircles({ engine }: { engine: BattleEngine }) {
 }
 
 function HealthCircle({ engine, entity, baseGeometry, red, green }: { engine: BattleEngine; entity: number; baseGeometry: RingGeometry; red: MeshBasicMaterial; green: MeshBasicMaterial }) {
-  const groupRef = useRef<Group>(null);
   const world = engine.world;
   const ratio = Math.max(0.02, Math.min(1, world.hp[entity] / Math.max(1, world.maxHp[entity])));
   const greenGeometry = useMemo(() => new RingGeometry(0.295, 0.375, 48, 1, Math.PI / 2, Math.PI * 2 * ratio), [ratio]);
   const [x, y, z] = entityStagePosition(world, entity, -0.09);
-
-  useFrame(() => {
-    const group = groupRef.current;
-    if (!group || world.active[entity] !== 1) return;
-    const [x, y, z] = entityStagePosition(world, entity, -0.09);
-    group.position.set(x, y - 0.42, z - 0.08);
-    group.scale.set(1, 0.34, 1);
-  });
-
+  const bench = isBenchSlot(world.formationSlot[entity]);
+  const scale = bench ? 0.62 : 1;
   return (
-    <group ref={groupRef} position={[x, y - 0.42, z - 0.08]} scale={[1, 0.34, 1]}>
+    <group position={[x, y - (bench ? 0.28 : 0.42), z - 0.08]} scale={[scale, scale * 0.34, 1]}>
       <mesh geometry={baseGeometry} material={red} />
       <mesh geometry={greenGeometry} material={green} />
     </group>
