@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { CanvasTexture, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, SRGBColorSpace } from 'three';
 import { MAX_ENTITIES, TILE_SIZE } from '../game/constants';
-import { isEnemyBoardSlot } from '../game/formationSlots';
+import { isBenchSlot } from '../game/formationSlots';
 import type { BattleEngine } from '../game/ecs/engine';
 import { EntityKind } from '../game/types';
 import { entityStagePosition } from './sceneMath';
@@ -23,11 +23,9 @@ function syncShadows(engine: BattleEngine, mesh: InstancedMesh | null, dummy: Ob
   for (let entity = 0; entity < engine.world.nextEntity; entity += 1) {
     if (!shouldShadow(engine.world, entity)) continue;
     const position = entityStagePosition(engine.world, entity, -0.02);
-    const tierScale = 1 + Math.max(0, engine.world.starTier[entity] - 1) * 0.35;
-    const bossScale = isEnemyBoardSlot(engine.world.formationSlot[entity]) && engine.world.unitId[entity] === 'pig_boss' ? 1.25 : 1;
-    dummy.position.set(position[0], position[1] - 0.45 * tierScale, position[2] - 0.18);
+    dummy.position.set(position[0], position[1] - 0.45, position[2] - 0.18);
     dummy.rotation.set(0, 0, 0);
-    dummy.scale.set(tierScale * bossScale, tierScale * bossScale, 1);
+    dummy.scale.set(1, 1, 1);
     dummy.updateMatrix();
     mesh.setMatrixAt(count, dummy.matrix);
     count += 1;
@@ -37,7 +35,8 @@ function syncShadows(engine: BattleEngine, mesh: InstancedMesh | null, dummy: Ob
 }
 
 function shouldShadow(world: BattleEngine['world'], entity: number): boolean {
-  return world.active[entity] === 1 && world.kind[entity] === EntityKind.Unit && world.hp[entity] > 0;
+  if (world.active[entity] !== 1 || world.kind[entity] !== EntityKind.Unit || world.hp[entity] <= 0) return false;
+  return !isBenchSlot(world.formationSlot[entity]) || world.draggedEntity === entity;
 }
 
 function makeShadowTexture(): CanvasTexture {

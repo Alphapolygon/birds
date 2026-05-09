@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { BattleEngine, EntitySummary, ShopSlotSummary } from '../game/ecs/engine';
 import { REROLL_COST, UNIT_COST } from '../game/ecs/engine';
 import { useGameStore } from '../store/useGameStore';
@@ -67,23 +67,64 @@ function BenchDock({ engine }: { engine: BattleEngine }) {
     <section className="bench-dock glass-dock" aria-label="Bench units">
       <div className="bench-dock-title">
         <strong>Bench</strong>
-        <span>Bought birds idle here. Drag them to any left-side board circle to fight.</span>
+        <span>Drag a card onto a blue grid square to deploy it.</span>
       </div>
       <div className="bench-card-row">
-        {bench.length === 0 ? <p className="muted bench-empty">Buy birds from the shop to fill the bench.</p> : bench.map((unit) => <BenchCard key={unit.id} unit={unit} />)}
+        {bench.length === 0 ? <p className="muted bench-empty">Buy birds from the shop to fill the bench.</p> : bench.map((unit) => <BenchCard key={unit.id} engine={engine} unit={unit} />)}
       </div>
     </section>
   );
 }
 
-function BenchCard({ unit }: { unit: EntitySummary }) {
+function BenchCard({ engine, unit }: { engine: BattleEngine; unit: EntitySummary }) {
   return (
-    <div className="bench-card" title={`${unit.name} ${unit.starTier}-Star`}>
+    <div
+      className="bench-card"
+      role="button"
+      tabIndex={0}
+      title={`${unit.name} ${unit.starTier}-Star`}
+      onPointerDown={(event) => beginBenchCardDrag(event, engine, unit.id)}
+    >
       <AtlasIcon spriteKey={unit.spriteKey} size={44} />
       <strong>{unit.name}</strong>
       <span>{'★'.repeat(Math.max(1, unit.starTier))}</span>
     </div>
   );
+}
+
+function beginBenchCardDrag(event: ReactPointerEvent<HTMLDivElement>, engine: BattleEngine, entity: number): void {
+  if (!engine.canDragUnit(entity)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  engine.beginDragUnit(entity);
+  engine.updateDragFromClient(event.clientX, event.clientY, 0.86);
+
+  function handleMove(moveEvent: PointerEvent): void {
+    moveEvent.preventDefault();
+    engine.updateDragFromClient(moveEvent.clientX, moveEvent.clientY, 0.86);
+  }
+
+  function handleUp(upEvent: PointerEvent): void {
+    upEvent.preventDefault();
+    cleanup();
+    engine.dropDraggedUnitFromClient(upEvent.clientX, upEvent.clientY);
+  }
+
+  function handleCancel(): void {
+    cleanup();
+    engine.cancelDrag();
+  }
+
+  function cleanup(): void {
+    window.removeEventListener('pointermove', handleMove);
+    window.removeEventListener('pointerup', handleUp);
+    window.removeEventListener('pointercancel', handleCancel);
+  }
+
+  window.addEventListener('pointermove', handleMove, { passive: false });
+  window.addEventListener('pointerup', handleUp, { passive: false });
+  window.addEventListener('pointercancel', handleCancel);
 }
 
 function CombatStatus({ engine }: { engine: BattleEngine }) {
@@ -114,7 +155,7 @@ function ShopPopup({ engine, onClose }: { engine: BattleEngine; onClose: () => v
         <div className="shop-popup-meta">
           <span>{UNIT_COST}g each</span>
           <span>3 matching cards auto-merge</span>
-          <span>2-Star and 3-Star units scale up in battle</span>
+          <span>2-Star and 3-Star units gain stats without changing size</span>
         </div>
         <div className="shop-popup-grid card-shop-grid">
           {slots.map((slot) => <ShopCard key={slot.index} slot={slot} disabled={slot.empty || state.playerGold < UNIT_COST} onBuy={() => engine.buyFromShop(slot.index)} />)}

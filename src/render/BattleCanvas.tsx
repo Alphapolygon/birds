@@ -11,8 +11,9 @@ import { SlotGuides } from './SlotGuides';
 import { UnitShadows } from './UnitShadows';
 import { HealthCircles } from './HealthCircles';
 import { FloatingDamageLayer } from './FloatingDamageLayer';
+import { Board } from './Board';
+import { TargetIndicators } from './TargetIndicators';
 import { VfxLayer } from './VfxLayer';
-import { slotWorldPosition } from './sceneMath';
 import { createWebGpuRenderer } from './webgpuRenderer';
 
 type BattleCanvasProps = {
@@ -38,15 +39,18 @@ export function BattleCanvas({ engine }: BattleCanvasProps) {
 }
 
 function SceneRuntime({ engine }: { engine: BattleEngine }) {
-  useFrame(({ camera }, delta) => {
+  useFrame(({ camera, size }, delta) => {
     engine.tick(delta);
     updateCamera(camera, engine, delta);
+    engine.setViewport(size.width, size.height, camera.position.x, camera.position.y, camera instanceof OrthographicCamera ? camera.zoom : 82);
   });
   return (
     <group>
       <DragSurface engine={engine} />
+      <Board />
       <SlotGuides engine={engine} />
       <UnitShadows engine={engine} />
+      <TargetIndicators engine={engine} />
       <HealthCircles engine={engine} />
       <EntityBatches engine={engine} />
       <ShieldRings engine={engine} />
@@ -99,9 +103,7 @@ function activeCameraX(engine: BattleEngine): number {
   const actor = engine.world.activeEntity;
   const target = engine.world.activeTarget;
   if (actor < 0 || target < 0) return 0;
-  const a = slotWorldPosition(engine.world.formationSlot[actor]);
-  const b = slotWorldPosition(engine.world.formationSlot[target]);
-  return (a[0] + b[0]) * 0.5;
+  return (engine.world.posX[actor] + engine.world.posX[target]) * 0.5;
 }
 
 function usePrepareRound(engine: BattleEngine, phase: string, bossRule: Parameters<BattleEngine['prepareRound']>[0]['bossRule'], territoryId: string, battleId: number): void {

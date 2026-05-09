@@ -2,7 +2,8 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { Color, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry } from 'three';
 import { MAX_ENTITIES, TILE_SIZE } from '../game/constants';
-import type { BattleEngine } from '../game/ecs/engine';
+import { MANA_MAX, type BattleEngine } from '../game/ecs/engine';
+import { isBenchSlot } from '../game/formationSlots';
 import { EntityKind, Faction } from '../game/types';
 import { entityStagePosition } from './sceneMath';
 
@@ -29,14 +30,13 @@ export function HealthBars({ engine }: { engine: BattleEngine }) {
 
     for (let i = 0; i < world.nextEntity; i++) {
       if (world.active[i] !== 1 || world.kind[i] !== EntityKind.Unit || world.hp[i] <= 0) continue;
+      if (isBenchSlot(world.formationSlot[i]) && world.draggedEntity !== i) continue;
 
       const pos = entityStagePosition(world, i, 0);
       const hpPct = world.hp[i] / world.maxHp[i];
-      const manaPct = world.starMax[i] > 0 ? world.mana[i] / world.starMax[i] : 0;
-      
-      // Calculate star-tier scaling for the bars
-      const tierScale = 1 + (Math.max(1, world.starTier[i]) - 1) * 0.15;
-      const yAnchor = pos[1] - (0.45 * tierScale); 
+      const manaPct = world.starMax[i] > 0 ? world.mana[i] / MANA_MAX : 0;
+      const tierScale = 1;
+      const yAnchor = pos[1] - 0.45; 
 
       // 1. HP Bar Fill
       dummy.position.set(pos[0] + (hpPct - 1) * (BAR_WIDTH * tierScale * 0.5), yAnchor, pos[2] + 0.1);

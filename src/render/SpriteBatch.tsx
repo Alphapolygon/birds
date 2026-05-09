@@ -6,7 +6,6 @@ import {
   InstancedMesh,
   LinearFilter,
   Matrix4,
-  NearestFilter,
   Object3D,
   PlaneGeometry,
   SRGBColorSpace,
@@ -134,6 +133,7 @@ function renderSort(world: BattleEngine['world'], a: number, b: number): number 
 function shouldRender(world: BattleEngine['world'], entity: number): boolean {
   if (world.active[entity] !== 1) return false;
   if (world.kind[entity] === EntityKind.Projectile) return false;
+  if (isBenchSlot(world.formationSlot[entity]) && world.draggedEntity !== entity) return false;
   return world.spriteKey[entity].length > 0;
 }
 
@@ -147,7 +147,7 @@ function writeEntityUvs(world: BattleEngine['world'], entity: number, instance: 
 function writeEntityMatrix(world: BattleEngine['world'], entity: number, dummy: Object3D, elapsed: number): Matrix4 {
   const position = entityWorldPosition(world, entity);
   const anim = animationPose(world, entity, elapsed);
-  const base = spriteScale(world, entity) * perspectiveScale(world, entity) * anim.scale;
+  const base = spriteScale(world, entity) * anim.scale;
   const aspect = Math.max(0.25, world.uvAspectRatio[entity] || 1);
   dummy.position.set(position[0] + anim.x, position[1] + anim.y, position[2]);
   dummy.rotation.set(0, 0, 0);
@@ -157,18 +157,9 @@ function writeEntityMatrix(world: BattleEngine['world'], entity: number, dummy: 
 }
 
 function spriteScale(world: BattleEngine['world'], entity: number): number {
-  const tierScale = world.kind[entity] === EntityKind.Unit ? 1 + (Math.max(1, world.starTier[entity]) - 1) * 0.35 : 1;
-  const benchScale = isBenchSlot(world.formationSlot[entity]) ? 0.62 : 1;
-  if (world.unitId[entity] === 'terence') return 1.18 * tierScale * benchScale;
   if (world.kind[entity] === EntityKind.GoldenEgg) return 0.72;
   if (world.kind[entity] === EntityKind.Barricade) return 0.88;
-  return tierScale * benchScale;
-}
-
-function perspectiveScale(world: BattleEngine['world'], entity: number): number {
-  if (isBenchSlot(world.formationSlot[entity])) return 1;
-  const y = world.draggedEntity === entity ? world.dragY : world.posY[entity];
-  return Math.max(0.78, Math.min(1.24, 1.0 + (-y - 0.05) * 0.12));
+  return 1;
 }
 
 function entityWorldPosition(world: BattleEngine['world'], entity: number): [number, number, number] {

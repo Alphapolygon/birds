@@ -9,6 +9,7 @@ import {
   isActiveBoardSlot,
   isBenchSlot,
   isEnemyBoardSlot,
+  slotGridPoint,
   slotPosition,
 } from '../formationSlots';
 import { BossRule, EntityKind, Faction, TerrainType, type BattleSeed, type BirdId, type UnitId } from '../types';
@@ -99,6 +100,8 @@ export function snapEntityToSlot(world: World, entity: number, slot = world.form
   world.posY[entity] = y;
   world.posZ[entity] = z;
   setLegacyCoordinateFromSlot(world, entity, slot);
+  world.pendingX[entity] = world.x[entity];
+  world.pendingY[entity] = world.y[entity];
 }
 
 export function seedEnemyBoard(world: World, bossRule: BossRule, bossRound = false): void {
@@ -248,7 +251,7 @@ function seedBossRound(world: World, bossRule: BossRule): void {
 }
 
 function spawnBoss(world: World, bossRule: BossRule): void {
-  const boss = spawnUnitInSlot(world, 'pig_boss', ENEMY_BOARD_SLOTS[8]);
+  const boss = spawnUnitInSlot(world, 'pig_boss', ENEMY_BOARD_SLOTS[ENEMY_BOARD_SLOTS.length - 1]);
   world.bossEntity = boss;
   world.hp[boss] = bossRule === BossRule.ComboDrain ? 52 : 42;
   world.maxHp[boss] = world.hp[boss];
@@ -286,22 +289,16 @@ function initialGaugeForSlot(slot: number): number {
 }
 
 function setLegacyCoordinateFromSlot(world: World, entity: number, slot: number): void {
-  if (isActiveBoardSlot(slot)) {
-    const index = ACTIVE_BOARD_SLOTS.indexOf(slot as (typeof ACTIVE_BOARD_SLOTS)[number]);
-    world.x[entity] = index % 3;
-    world.y[entity] = Math.floor(index / 3);
+  const gridPoint = slotGridPoint(slot);
+  if (gridPoint) {
+    world.x[entity] = gridPoint.x;
+    world.y[entity] = gridPoint.y;
     return;
   }
   if (isBenchSlot(slot)) {
     const index = BENCH_SLOTS.indexOf(slot as (typeof BENCH_SLOTS)[number]);
     world.x[entity] = index;
     world.y[entity] = 5;
-    return;
-  }
-  if (isEnemyBoardSlot(slot)) {
-    const index = ENEMY_BOARD_SLOTS.indexOf(slot as (typeof ENEMY_BOARD_SLOTS)[number]);
-    world.x[entity] = 7 + (index % 3);
-    world.y[entity] = Math.floor(index / 3);
   }
 }
 

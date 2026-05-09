@@ -4,6 +4,7 @@ import { Color, InstancedMesh, MeshBasicMaterial, Object3D, RingGeometry } from 
 import { MAX_ENTITIES, TILE_SIZE } from '../game/constants';
 import { SHIELD_ANIM_SECONDS } from '../game/ecs/animation';
 import type { BattleEngine } from '../game/ecs/engine';
+import { isBenchSlot } from '../game/formationSlots';
 import { EntityKind } from '../game/types';
 import { entityStagePosition } from './sceneMath';
 
@@ -40,16 +41,16 @@ function syncShields(engine: BattleEngine, mesh: InstancedMesh | null, dummy: Ob
 
 function shouldRenderShield(world: BattleEngine['world'], entity: number): boolean {
   if (world.active[entity] !== 1 || world.kind[entity] !== EntityKind.Unit) return false;
+  if (isBenchSlot(world.formationSlot[entity]) && world.draggedEntity !== entity) return false;
   return world.guard[entity] > 0 || world.animShield[entity] > 0;
 }
 
 function writeShieldMatrix(engine: BattleEngine, entity: number, dummy: Object3D, elapsed: number): void {
   const position = entityStagePosition(engine.world, entity, 0.38);
   const pulse = shieldPulse(engine.world, entity, elapsed);
-  const bossScale = engine.world.unitId[entity] === 'pig_boss' ? 1.2 : 1;
   dummy.position.set(position[0], position[1], position[2] + 0.2);
   dummy.rotation.set(0, 0, elapsed * 0.65);
-  dummy.scale.set(bossScale * pulse, bossScale * pulse, 1);
+  dummy.scale.set(pulse, pulse, 1);
   dummy.updateMatrix();
 }
 
