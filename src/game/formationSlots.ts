@@ -1,15 +1,14 @@
-import { GRID_COLS, GRID_ROWS, PLAYER_DEPLOY_COLS, TILE_SIZE, X_OFFSET, Y_OFFSET } from './constants';
+import { GRID_COLS, GRID_ROWS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS, TILE_SIZE, X_OFFSET, Y_OFFSET } from './constants';
 
-const ENEMY_DEPLOY_COLS = 2;
 const GRID_TILT_X = -Math.PI / 4;
 const GRID_GROUP_POSITION: [number, number, number] = [0, -1.05, 0];
 
-export const ACTIVE_BOARD_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
-export const ENEMY_BOARD_SLOTS = [20, 21, 22, 23, 24, 25, 26, 27] as const;
-export const BENCH_SLOTS = [40, 41, 42, 43, 44, 45] as const;
+export const ACTIVE_BOARD_SLOTS = Array.from({ length: PLAYER_DEPLOY_COLS * GRID_ROWS }, (_, i) => i) as unknown as readonly number[];
+export const ENEMY_BOARD_SLOTS = Array.from({ length: ENEMY_DEPLOY_COLS * GRID_ROWS }, (_, i) => 100 + i) as unknown as readonly number[];
+export const BENCH_SLOTS = [200, 201, 202, 203, 204, 205, 206, 207] as const;
 export const PLAYER_FORMATION_SLOTS = [...ACTIVE_BOARD_SLOTS, ...BENCH_SLOTS] as const;
 
-const BENCH_X = [-3.1, -1.86, -0.62, 0.62, 1.86, 3.1] as const;
+const BENCH_X = [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5] as const;
 
 export const SLOT_POSITIONS: Record<number, [number, number, number]> = buildSlotPositions();
 
@@ -75,7 +74,7 @@ function buildSlotPositions(): Record<number, [number, number, number]> {
     positions[slot] = tileStagePosition(col, row, 0.32 + row * 0.015);
   });
   BENCH_SLOTS.forEach((slot, index) => {
-    positions[slot] = [BENCH_X[index], -2.28, 0.2];
+    positions[slot] = [BENCH_X[index], -4.4, 0.2];
   });
   return positions;
 }

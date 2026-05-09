@@ -1,4 +1,4 @@
-import { BOSS_ROUND_NUMBER, GRID_COLS, MAP_BATTLE_ROUNDS, PLAYER_DEPLOY_COLS } from '../constants';
+import { BOSS_ROUND_NUMBER, GRID_COLS, MAP_BATTLE_ROUNDS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS } from '../constants';
 import { randomAutoRelicBit } from '../relicCatalog';
 import { syncEntityAtlasFrame } from '../spriteAtlas';
 import { STAR_MAX_BY_UNIT, UNIT_CATALOG } from '../unitCatalog';
@@ -295,14 +295,13 @@ function setLegacyCoordinateFromSlot(world: World, entity: number, slot: number)
   if (isBenchSlot(slot)) {
     const index = BENCH_SLOTS.indexOf(slot as (typeof BENCH_SLOTS)[number]);
     world.x[entity] = index;
-    world.y[entity] = 5;
+    world.y[entity] = 10;
     return;
   }
   if (isEnemyBoardSlot(slot)) {
     const index = ENEMY_BOARD_SLOTS.indexOf(slot as (typeof ENEMY_BOARD_SLOTS)[number]);
-    const enemyDeployCols = 2;
-    world.x[entity] = GRID_COLS - enemyDeployCols + (index % enemyDeployCols);
-    world.y[entity] = Math.floor(index / enemyDeployCols);
+    world.x[entity] = GRID_COLS - ENEMY_DEPLOY_COLS + (index % ENEMY_DEPLOY_COLS);
+    world.y[entity] = Math.floor(index / ENEMY_DEPLOY_COLS);
   }
 }
 

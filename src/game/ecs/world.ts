@@ -103,7 +103,7 @@ export type World = {
   uvAspectRatio: Float32Array;
 
   // Static-stage / auto-chess ECS buffers.
-  formationSlot: Int8Array;
+  formationSlot: Int16Array;
   starTier: Uint8Array;
   speed: Int32Array;
   actionGauge: Float32Array;
@@ -311,7 +311,7 @@ function makeWorld(): World {
     uvScaleX: new Float32Array(MAX_ENTITIES),
     uvScaleY: new Float32Array(MAX_ENTITIES),
     uvAspectRatio: new Float32Array(MAX_ENTITIES),
-    formationSlot: new Int8Array(MAX_ENTITIES),
+    formationSlot: new Int16Array(MAX_ENTITIES),
     starTier: new Uint8Array(MAX_ENTITIES),
     speed: new Int32Array(MAX_ENTITIES),
     actionGauge: new Float32Array(MAX_ENTITIES),

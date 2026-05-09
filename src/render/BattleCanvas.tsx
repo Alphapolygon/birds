@@ -29,7 +29,7 @@ export function BattleCanvas({ engine }: BattleCanvasProps) {
     <Canvas
       className="battle-canvas"
       orthographic
-      camera={{ position: [0, 0, 10], zoom: 82, near: 0.1, far: 100 }}
+      camera={{ position: [0, -1.2, 10], zoom: 44, near: 0.1, far: 100 }}
       gl={createWebGpuRenderer as any}
     >
       <SceneRuntime engine={engine} />
@@ -71,16 +71,15 @@ function DragSurface({ engine }: { engine: BattleEngine }) {
   };
   return (
     <mesh position={[0, -0.05, -0.35]} onPointerMove={onPointerMove} onPointerUp={onPointerUp} renderOrder={0}>
-      <planeGeometry args={[9.6, 6.0]} />
+      <planeGeometry args={[10.5, 9.5]} />
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
     </mesh>
   );
 }
 
 function updateCamera(camera: Camera, engine: BattleEngine, delta: number): void {
-  // Static auto-battler camera: no combat focus panning.
-  const targetZoom = engine.world.combatStarted === 1 ? 86 : 80;
-  const targetY = engine.world.combatStarted === 1 ? 0 : -0.18;
+  const targetZoom = engine.world.combatStarted === 1 ? 48 : 44;
+  const targetY = engine.world.combatStarted === 1 ? -0.8 : -1.2;
   const lerp = 1 - Math.pow(0.001, Math.min(0.05, delta));
 
   camera.position.x += (0 - camera.position.x) * lerp;

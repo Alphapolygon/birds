@@ -895,7 +895,7 @@ h2 {
   display: flex;
   gap: 0.45rem;
   margin-top: 0.3rem;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .compact-player-row {
@@ -1201,7 +1201,7 @@ h2 {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding: 0.7rem 0.85rem;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .floating-battle-feed p {
@@ -1213,7 +1213,68 @@ h2 {
 
 .floating-battle-feed .eyebrow {
   color: #ffd166;
+  margin-bottom: 0;
+}
+
+.battle-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.35rem;
+}
+
+.battle-feed-close,
+.battle-feed-toggle,
+.debug-panel-toggle {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.battle-feed-close {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9edf7;
+  font-weight: 900;
+  padding: 0.25rem 0.55rem;
+}
+
+.battle-feed-toggle {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 12;
+  pointer-events: auto;
+}
+
+.debug-panel {
+  position: absolute;
+  right: 1rem;
+  top: 12rem;
+  z-index: 100;
+  pointer-events: auto;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: end;
+}
+
+.debug-panel-body {
+  border: 1px solid rgba(255, 77, 77, 0.7);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.85);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+  padding: 1rem;
+}
+
+.debug-panel-body .eyebrow {
+  color: #ff4d4d;
+}
+
+.debug-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .round-result-backdrop {

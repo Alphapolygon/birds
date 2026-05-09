@@ -1,4 +1,4 @@
-import { BOSS_ROUND_NUMBER, GRID_COLS, GRID_ROWS, MAP_BATTLE_ROUNDS, TILE_SIZE, X_OFFSET, Y_OFFSET } from '../constants';
+import { BOSS_ROUND_NUMBER, GRID_COLS, GRID_ROWS, MAP_BATTLE_ROUNDS, TILE_COUNT, TILE_SIZE, X_OFFSET, Y_OFFSET } from '../constants';
 import {
   ACTIVE_BOARD_SLOTS,
   BENCH_SLOTS,
@@ -160,6 +160,18 @@ const BIRD_SET = new Set<string>(BIRD_IDS);
 
 export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   const world = createWorld();
+
+  function debugAddGold(amount: number): void {
+    world.playerGold += amount;
+    emitEvent(world, { type: 'gold_changed', message: `DEBUG: Added ${amount} gold.` });
+    flushEvents();
+  }
+
+  function debugAddHealth(amount: number): void {
+    world.playerHp = Math.min(100, world.playerHp + amount);
+    emitEvent(world, { type: 'unit_healed', entity: -1, message: `DEBUG: Restored ${amount} Commander HP.` });
+    flushEvents();
+  }
 
   function start(seed: BattleSeed): void {
     initializeBattle(world, seed);
@@ -377,8 +389,8 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   function endPlayerTurn(): void { waitSelected(); }
   function activateStarPower(): void { duoAttackSelected(); }
   function captureSelected(): void { invalid('Capture was removed in the auto-battler pivot.'); }
-  function getReachableMask(): Uint8Array { return new Uint8Array(40); }
-  function getActionMask(_mode: PlayerActionMode): Uint8Array { return new Uint8Array(40); }
+  function getReachableMask(): Uint8Array { return new Uint8Array(TILE_COUNT); }
+  function getActionMask(_mode: PlayerActionMode): Uint8Array { return new Uint8Array(TILE_COUNT); }
 
   return {
     world,
@@ -421,6 +433,8 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     captureSelected,
     getReachableMask,
     getActionMask,
+    debugAddGold,
+    debugAddHealth,
   };
 
   function tickAutoCombat(delta: number): void {
@@ -1091,8 +1105,8 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     const [survivor, consumedA, consumedB] = group;
     const nextTier = Math.min(3, world.starTier[survivor] + 1);
     world.starTier[survivor] = nextTier;
-    world.maxHp[survivor] = Math.ceil(world.maxHp[survivor] * 1.8);
-    world.attack[survivor] = Math.ceil(world.attack[survivor] * 1.8);
+    world.maxHp[survivor] = Math.ceil(world.maxHp[survivor] * 1.4);
+    world.attack[survivor] = Math.ceil(world.attack[survivor] * 1.4);
     world.hp[survivor] = world.maxHp[survivor];
     world.activeRelics[survivor] |= world.activeRelics[consumedA] | world.activeRelics[consumedB];
     world.mana[survivor] = Math.max(world.mana[survivor], world.mana[consumedA], world.mana[consumedB]);
@@ -1215,8 +1229,8 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     const element = document.querySelector('.battle-stage canvas') ?? document.querySelector('.battle-stage');
     const rect = element?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return fallback;
-    const zoom = world.combatStarted === 1 ? 86 : 80;
-    const cameraY = world.combatStarted === 1 ? 0 : -0.18;
+    const zoom = world.combatStarted === 1 ? 48 : 44;
+    const cameraY = world.combatStarted === 1 ? -0.8 : -1.2;
     const nx = (clientX - rect.left) / rect.width;
     const ny = (clientY - rect.top) / rect.height;
     return {

@@ -1,5 +1,5 @@
 import { TILE_SIZE, X_OFFSET, Y_OFFSET } from '../game/constants';
-import { slotPosition } from '../game/formationSlots';
+import { isEnemyBoardSlot, slotPosition } from '../game/formationSlots';
 
 export const GRID_TILT_X = -Math.PI / 4;
 export const GRID_OPACITY = 0.2;
@@ -44,7 +44,7 @@ export function entityStagePosition(world: any, entity: number, lift = 0): [numb
 
 export function approachTargetPosition(attackerSlot: number, targetSlot: number, lift = 0): [number, number, number] {
   const targetBase = slotWorldPosition(targetSlot, lift + 0.08);
-  const direction = attackerSlot >= 20 ? 1 : -1;
+  const direction = isEnemyBoardSlot(attackerSlot) ? 1 : -1;
   return [targetBase[0] + direction * 0.72, targetBase[1], targetBase[2] + 0.15];
 }
 

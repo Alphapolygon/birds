@@ -1,9 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Color, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry } from 'three';
-import { GRID_COLS, PLAYER_DEPLOY_COLS, TILE_COUNT, TILE_SIZE } from '../game/constants';
+import { GRID_COLS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS, TILE_COUNT, TILE_SIZE } from '../game/constants';
 import { GRID_GROUP_POSITION, GRID_TILT_X, tileGridPosition } from './sceneMath';
-
-const ENEMY_DEPLOY_COLS = 2;
 
 export function Board() {
   const meshRef = useRef<InstancedMesh>(null);

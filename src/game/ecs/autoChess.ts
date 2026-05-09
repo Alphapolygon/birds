@@ -1,11 +1,12 @@
+import { GRID_COLS, GRID_ROWS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS } from '../constants';
 import { BIRD_IDS, UNIT_CATALOG } from '../unitCatalog';
 import { EntityKind, Faction, type BirdId, type UnitId } from '../types';
 import { playSpecialEffect } from './animation';
 import { emitEvent, isAlive, type World } from './world';
 
-export const ACTIVE_BOARD_SLOTS = [0, 1, 2, 3] as const;
-export const BENCH_SLOTS = [10, 11, 12, 13, 14, 15] as const;
-export const ENEMY_BOARD_SLOTS = [20, 21, 22, 23, 24] as const;
+export const ACTIVE_BOARD_SLOTS = Array.from({ length: PLAYER_DEPLOY_COLS * GRID_ROWS }, (_, index) => index) as unknown as readonly number[];
+export const BENCH_SLOTS = [200, 201, 202, 203, 204, 205, 206, 207] as const;
+export const ENEMY_BOARD_SLOTS = Array.from({ length: ENEMY_DEPLOY_COLS * GRID_ROWS }, (_, index) => 100 + index) as unknown as readonly number[];
 export const SHOP_SIZE = 5;
 export const BUY_COST = 3;
 export const REROLL_COST = 2;
@@ -139,8 +140,8 @@ function mergeFirstThree(world: World, entities: number[]): void {
   const [survivor, consumedA, consumedB] = entities;
   const oldTier = world.starTier[survivor];
   world.starTier[survivor] = Math.min(3, oldTier + 1);
-  world.maxHp[survivor] = Math.ceil(world.maxHp[survivor] * 1.8);
-  world.attack[survivor] = Math.ceil(world.attack[survivor] * 1.8);
+  world.maxHp[survivor] = Math.ceil(world.maxHp[survivor] * 1.4);
+  world.attack[survivor] = Math.ceil(world.attack[survivor] * 1.4);
   world.defense[survivor] = Math.ceil(world.defense[survivor] * 1.25);
   world.hp[survivor] = world.maxHp[survivor];
   consumeMergedEntity(world, consumedA);
@@ -184,23 +185,25 @@ function weightedBirdPool(round: number): BirdId[] {
 }
 
 export function setLegacyCoordinateFromAutoSlot(world: World, entity: number, slot: number): void {
-  if (slot >= 20) {
-    world.x[entity] = 8;
-    world.y[entity] = slot - 20;
+  if (isEnemyBoardSlot(slot)) {
+    const index = ENEMY_BOARD_SLOTS.indexOf(slot);
+    world.x[entity] = GRID_COLS - ENEMY_DEPLOY_COLS + (index % ENEMY_DEPLOY_COLS);
+    world.y[entity] = Math.floor(index / ENEMY_DEPLOY_COLS);
     return;
   }
-  if (slot >= 10) {
-    world.x[entity] = slot - 10;
-    world.y[entity] = 5;
+  if (isBenchSlot(slot)) {
+    world.x[entity] = Math.max(0, BENCH_SLOTS.indexOf(slot as (typeof BENCH_SLOTS)[number]));
+    world.y[entity] = 10;
     return;
   }
-  world.x[entity] = 1;
-  world.y[entity] = slot;
+  const index = Math.max(0, ACTIVE_BOARD_SLOTS.indexOf(slot));
+  world.x[entity] = index % PLAYER_DEPLOY_COLS;
+  world.y[entity] = Math.floor(index / PLAYER_DEPLOY_COLS);
 }
 
 function slotLabel(slot: number): string {
-  if (isActiveBoardSlot(slot)) return `frontline slot ${slot + 1}`;
-  if (isBenchSlot(slot)) return `bench slot ${slot - 9}`;
+  if (isActiveBoardSlot(slot)) return `board slot ${ACTIVE_BOARD_SLOTS.indexOf(slot) + 1}`;
+  if (isBenchSlot(slot)) return `bench slot ${BENCH_SLOTS.indexOf(slot as (typeof BENCH_SLOTS)[number]) + 1}`;
   return `slot ${slot}`;
 }
 

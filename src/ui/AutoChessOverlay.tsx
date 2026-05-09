@@ -51,6 +51,7 @@ export function AutoChessOverlay({ engine }: AutoChessOverlayProps) {
       <FloatingBattleFeed />
       {shopOpen && isPrep ? <ShopPopup engine={engine} onClose={() => setShopOpen(false)} /> : null}
       {state.battleEnded ? <RoundResultModal engine={engine} onContinue={continueRound} onReturn={() => completeBattle(engine.getBattleReport())} /> : null}
+      <DebugPanel engine={engine} />
     </div>
   );
 }
@@ -212,13 +213,63 @@ function ShopCard({ slot, disabled, onBuy }: { slot: ShopSlotSummary; disabled: 
 }
 
 function FloatingBattleFeed() {
+  const [open, setOpen] = useState(true);
   const events = useGameStore((state) => state.events);
-  const recent = events.slice(0, 5);
+  const recent = events.slice(0, 9);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="battle-feed-toggle ghost"
+        aria-expanded="false"
+        aria-controls="battle-feed-list"
+        onClick={() => setOpen(true)}
+      >
+        Battle Log{recent.length > 0 ? ` (${recent.length})` : ''}
+      </button>
+    );
+  }
+
   return (
     <section className="floating-battle-feed" aria-label="Battle feed">
-      <p className="eyebrow">Battle Feed</p>
-      {recent.length === 0 ? <p className="muted">No events yet.</p> : recent.map((event, index) => <p key={`${event.type}-${index}`}>{event.message}</p>)}
+      <div className="battle-feed-header">
+        <p className="eyebrow">Battle Feed</p>
+        <button
+          type="button"
+          className="battle-feed-close"
+          aria-expanded="true"
+          aria-controls="battle-feed-list"
+          onClick={() => setOpen(false)}
+        >
+          Hide
+        </button>
+      </div>
+      <div id="battle-feed-list" className="battle-feed-list">
+        {recent.length === 0 ? <p className="muted">No events yet.</p> : recent.map((event, index) => <p key={`${event.type}-${index}`}>{event.message}</p>)}
+      </div>
     </section>
+  );
+}
+
+function DebugPanel({ engine }: { engine: BattleEngine }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="debug-panel" aria-label="Debug controls">
+      <button type="button" className="debug-panel-toggle ghost" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        {open ? 'Hide Debug' : 'Debug'}
+      </button>
+      {open ? (
+        <div className="debug-panel-body">
+          <p className="eyebrow">Debug Controls</p>
+          <div className="debug-panel-actions">
+            <button type="button" className="ghost" onClick={() => engine.debugAddGold(20)}>+20 Gold</button>
+            <button type="button" className="ghost" onClick={() => engine.debugAddHealth(30)}>+30 HP</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
