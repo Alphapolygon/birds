@@ -531,14 +531,22 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
       const target = world.targetEntity[entity] >= 0 && isAlive(world.targetEntity[entity]) ? world.targetEntity[entity] : nearestEnemyTarget(entity);
       if (target < 0) continue;
       if (inAttackRange(entity, target)) continue;
+
+      world.actionClock[entity] += delta;
+      const hopDelay = 0.55 - Math.max(1, world.speed[entity]) * 0.012;
+      if (world.actionClock[entity] < hopDelay) continue;
+
       if (!isSettledOnGrid(entity)) continue;
 
       const next = nextReservedStep(entity, target, reserved);
       if (!next) continue;
+
       reserveGridTile(reserved, next.x, next.y, entity);
       world.x[entity] = next.x;
       world.y[entity] = next.y;
       writeCombatHome(entity);
+
+      world.actionClock[entity] = 0;
     }
 
     settleGridPositions(delta);
@@ -546,7 +554,7 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   }
 
   function settleGridPositions(delta: number): void {
-    const t = Math.min(1, delta * 7.5);
+    const t = Math.min(1, delta * 14.0);
     for (let entity = 0; entity < world.nextEntity; entity += 1) {
       if (!isCombatParticipant(entity)) continue;
       writeCombatHome(entity);
@@ -558,9 +566,10 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
   function nextReservedStep(entity: number, target: number, reserved: Int32Array): { x: number; y: number } | null {
     const currentDistance = gridDistance(entity, target);
-    const minRange = Math.max(1, world.rangeMin[entity]);
-    const maxRange = Math.max(minRange, world.rangeMax[entity]);
-    const wantsSpace = currentDistance < minRange;
+    const maxRange = Math.max(1, world.rangeMax[entity]);
+
+    if (currentDistance <= maxRange) return null;
+
     const candidates = [
       { x: world.x[entity] + 1, y: world.y[entity] },
       { x: world.x[entity] - 1, y: world.y[entity] },
@@ -570,20 +579,28 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
     let best: { x: number; y: number } | null = null;
     let bestScore = Number.POSITIVE_INFINITY;
+
     for (const candidate of candidates) {
       if (!canReserveGridTile(entity, candidate.x, candidate.y, reserved)) continue;
-      const distance = Math.abs(candidate.x - world.x[target]) + Math.abs(candidate.y - world.y[target]);
-      if (!wantsSpace && distance >= currentDistance && currentDistance > maxRange) continue;
-      if (wantsSpace && distance <= currentDistance) continue;
-      const rangePenalty = distance > maxRange ? distance - maxRange : distance < minRange ? minRange - distance : 0;
-      const lanePenalty = Math.abs(candidate.y - world.y[target]) * 0.08;
-      const forwardBias = world.faction[entity] === Faction.Player ? -candidate.x * 0.01 : candidate.x * 0.01;
-      const score = rangePenalty + lanePenalty + forwardBias;
+      const dist = Math.abs(candidate.x - world.x[target]) + Math.abs(candidate.y - world.y[target]);
+
+      if (dist > currentDistance) continue;
+
+      const score = dist + Math.abs(candidate.y - world.y[target]) * 0.1;
       if (score < bestScore) {
         bestScore = score;
         best = candidate;
       }
     }
+
+    if (!best) {
+      for (const candidate of candidates) {
+        if (!canReserveGridTile(entity, candidate.x, candidate.y, reserved)) continue;
+        const dist = Math.abs(candidate.x - world.x[target]) + Math.abs(candidate.y - world.y[target]);
+        if (dist === currentDistance) return candidate;
+      }
+    }
+
     return best;
   }
 
@@ -962,9 +979,8 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
 
   function inAttackRange(attacker: number, target: number): boolean {
     const distance = gridDistance(attacker, target);
-    const min = Math.max(1, world.rangeMin[attacker]);
-    const max = Math.max(min, world.rangeMax[attacker]);
-    return distance >= min && distance <= max;
+    const max = Math.max(1, world.rangeMax[attacker]);
+    return distance <= max;
   }
 
   function footprintDistance(a: number, b: number): number {

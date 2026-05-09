@@ -1,20 +1,21 @@
 import { useMemo } from 'react';
-import { MeshBasicMaterial, RingGeometry } from 'three';
-import { ACTIVE_BOARD_SLOTS, slotPosition } from '../game/formationSlots';
+import { MeshBasicMaterial, PlaneGeometry } from 'three';
+import { BENCH_SLOTS, slotPosition } from '../game/formationSlots';
+import { GRID_TILT_X } from './sceneMath';
 import type { BattleEngine } from '../game/ecs/engine';
 
 export function SlotGuides({ engine }: { engine: BattleEngine }) {
-  const activeMaterial = useMemo(() => new MeshBasicMaterial({ color: '#76ff9b', transparent: true, opacity: 0.34, depthWrite: false }), []);
-  const geometry = useMemo(() => new RingGeometry(0.31, 0.38, 40), []);
+  const benchMaterial = useMemo(() => new MeshBasicMaterial({ color: '#263149', transparent: true, opacity: 0.6, depthWrite: false }), []);
+  const geometry = useMemo(() => new PlaneGeometry(0.9, 0.9), []);
+
   if (engine.world.combatStarted === 1 || engine.world.battleEnded === 1) return null;
+
   return (
-    <group renderOrder={2}>
-      {ACTIVE_BOARD_SLOTS.map((slot) => <SlotRing key={slot} slot={slot} geometry={geometry} material={activeMaterial} />)}
+    <group renderOrder={1}>
+      {BENCH_SLOTS.map((slot) => {
+        const [x, y, z] = slotPosition(slot, -0.04);
+        return <mesh key={slot} geometry={geometry} material={benchMaterial} position={[x, y - 0.45, z]} rotation={[GRID_TILT_X, 0, 0]} />;
+      })}
     </group>
   );
-}
-
-function SlotRing({ slot, geometry, material }: { slot: number; geometry: RingGeometry; material: MeshBasicMaterial }) {
-  const [x, y, z] = slotPosition(slot, -0.08);
-  return <mesh geometry={geometry} material={material} position={[x, y - 0.36, z - 0.08]} scale={[1, 0.42, 1]} rotation={[0, 0, 0]} />;
 }

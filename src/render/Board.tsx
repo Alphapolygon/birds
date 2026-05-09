@@ -7,7 +7,7 @@ const ENEMY_DEPLOY_COLS = 2;
 
 export function Board() {
   const meshRef = useRef<InstancedMesh>(null);
-  const geometry = useMemo(() => new PlaneGeometry(TILE_SIZE * 0.96, TILE_SIZE * 0.96), []);
+  const geometry = useMemo(() => new PlaneGeometry(TILE_SIZE * 0.94, TILE_SIZE * 0.94), []);
   const material = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.8, vertexColors: true, depthWrite: false }), []);
   const dummy = useMemo(() => new Object3D(), []);
   const color = useMemo(() => new Color(), []);
@@ -24,7 +24,19 @@ export function Board() {
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
-      mesh.setColorAt(index, color.set(tileColor(x)));
+
+      let hexColor = '#ffffff';
+      let opacity = 0.05;
+
+      if (x < PLAYER_DEPLOY_COLS) {
+        hexColor = '#3b82f6';
+        opacity = 0.2;
+      } else if (x >= GRID_COLS - ENEMY_DEPLOY_COLS) {
+        hexColor = '#ec4899';
+        opacity = 0.2;
+      }
+
+      mesh.setColorAt(index, color.set(hexColor).multiplyScalar(opacity));
     }
 
     mesh.count = TILE_COUNT;
@@ -42,10 +54,4 @@ export function Board() {
       rotation={[GRID_TILT_X, 0, 0]}
     />
   );
-}
-
-function tileColor(x: number): string {
-  if (x < PLAYER_DEPLOY_COLS) return '#2563eb';
-  if (x >= GRID_COLS - ENEMY_DEPLOY_COLS) return '#db2777';
-  return '#182033';
 }
