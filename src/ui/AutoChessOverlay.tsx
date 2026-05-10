@@ -76,7 +76,7 @@ function BenchDock({ engine }: { engine: BattleEngine }) {
         <span>Drag a card onto a blue grid square to deploy it.</span>
       </div>
       <div className="bench-card-row">
-        {bench.length === 0 ? <p className="muted bench-empty">Buy birds from the shop to fill the bench.</p> : bench.map((unit) => <BenchCard key={unit.id} engine={engine} unit={unit} />)}
+        {bench.length === 0 ? <p className="muted bench-empty">Bench units.</p> : bench.map((unit) => <BenchCard key={unit.id} engine={engine} unit={unit} />)}
       </div>
     </section>
   );
@@ -213,7 +213,7 @@ function ShopCard({ slot, disabled, onBuy }: { slot: ShopSlotSummary; disabled: 
 }
 
 function FloatingBattleFeed() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const events = useGameStore((state) => state.events);
   const recent = events.slice(0, 9);
 
@@ -266,6 +266,8 @@ function DebugPanel({ engine }: { engine: BattleEngine }) {
           <div className="debug-panel-actions">
             <button type="button" className="ghost" onClick={() => engine.debugAddGold(20)}>+20 Gold</button>
             <button type="button" className="ghost" onClick={() => engine.debugAddHealth(30)}>+30 HP</button>
+            <button type="button" className="ghost" onClick={() => engine.debugModifyEnemies(-10, -2)}>Nerf Pigs</button>
+            <button type="button" className="ghost" onClick={() => engine.debugModifyEnemies(20, 5)}>Buff Pigs</button>
           </div>
         </div>
       ) : null}

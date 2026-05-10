@@ -173,6 +173,20 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     flushEvents();
   }
 
+  function debugModifyEnemies(hpDelta: number, atkDelta: number): void {
+    let count = 0;
+    for (let entity = 0; entity < world.nextEntity; entity += 1) {
+      if (isAlive(entity) && world.faction[entity] === Faction.Pig) {
+        world.maxHp[entity] = Math.max(1, world.maxHp[entity] + hpDelta);
+        world.hp[entity] = Math.max(1, world.hp[entity] + hpDelta);
+        world.attack[entity] = Math.max(1, world.attack[entity] + atkDelta);
+        count += 1;
+      }
+    }
+    emitEvent(world, { type: 'unit_healed', entity: -1, message: `DEBUG: Modified ${count} enemies (HP ${hpDelta > 0 ? '+' : ''}${hpDelta}, ATK ${atkDelta > 0 ? '+' : ''}${atkDelta}).` });
+    flushEvents();
+  }
+
   function start(seed: BattleSeed): void {
     initializeBattle(world, seed);
     initializeAutoCombatState();
@@ -435,6 +449,7 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     getActionMask,
     debugAddGold,
     debugAddHealth,
+    debugModifyEnemies,
   };
 
   function tickAutoCombat(delta: number): void {
@@ -1217,10 +1232,10 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
   function combatTilePosition(x: number, y: number, localZ = 0): [number, number, number] {
     const localX = x * TILE_SIZE - X_OFFSET;
     const localY = Y_OFFSET - y * TILE_SIZE;
-    const tilt = -Math.PI / 4;
+    const tilt = -Math.PI / 2.6;
     const tiltedY = localY * Math.cos(tilt) - localZ * Math.sin(tilt);
     const tiltedZ = localY * Math.sin(tilt) + localZ * Math.cos(tilt);
-    return [localX, tiltedY - 1.05, tiltedZ];
+    return [localX, tiltedY - 0.2, tiltedZ];
   }
 
   function clientToStagePoint(clientX: number, clientY: number): { x: number; y: number } {
@@ -1229,8 +1244,11 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     const element = document.querySelector('.battle-stage canvas') ?? document.querySelector('.battle-stage');
     const rect = element?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return fallback;
-    const zoom = world.combatStarted === 1 ? 48 : 44;
-    const cameraY = world.combatStarted === 1 ? -0.8 : -1.2;
+    
+    // Orthographic Math: perfectly matches the 90/95 zoom and 1.5 Y-offset in BattleCanvas
+    const zoom = world.combatStarted === 1 ? 95 : 90;
+    const cameraY = 1.5;
+    
     const nx = (clientX - rect.left) / rect.width;
     const ny = (clientY - rect.top) / rect.height;
     return {

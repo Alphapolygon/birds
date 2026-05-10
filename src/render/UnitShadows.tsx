@@ -14,7 +14,7 @@ export function UnitShadows({ engine }: { engine: BattleEngine }) {
   const material = useMemo(() => new MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.42, depthWrite: false }), [texture]);
   const dummy = useMemo(() => new Object3D(), []);
   useFrame(() => syncShadows(engine, meshRef.current, dummy));
-  return <instancedMesh ref={meshRef} args={[geometry, material, MAX_ENTITIES]} frustumCulled={false} renderOrder={1} />;
+  return <instancedMesh ref={meshRef} args={[geometry, material, MAX_ENTITIES]} frustumCulled={false} renderOrder={2} />;
 }
 
 function syncShadows(engine: BattleEngine, mesh: InstancedMesh | null, dummy: Object3D): void {

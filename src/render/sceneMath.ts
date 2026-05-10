@@ -1,9 +1,10 @@
 import { TILE_SIZE, X_OFFSET, Y_OFFSET } from '../game/constants';
 import { isEnemyBoardSlot, slotPosition } from '../game/formationSlots';
 
-export const GRID_TILT_X = -Math.PI / 4;
+// Steeper isometric tilt for stronger depth on the 8x8 board.
+export const GRID_TILT_X = -Math.PI / 2.6;
 export const GRID_OPACITY = 0.2;
-export const GRID_GROUP_POSITION: [number, number, number] = [0, -1.05, 0];
+export const GRID_GROUP_POSITION: [number, number, number] = [0, -0.2, 0];
 
 export function worldX(logicalX: number): number {
   return logicalX * TILE_SIZE - X_OFFSET;
@@ -37,8 +38,9 @@ export function entityStagePosition(world: any, entity: number, lift = 0): [numb
   if (world.draggedEntity === entity && world.dragX !== undefined) {
     return [world.dragX, world.dragY, world.dragZ + lift];
   }
-  // Standard Auto-Chess real-time position tracking
-  if (world.posX && world.posY) return [world.posX[entity], world.posY[entity], world.posZ[entity] + lift];
+  if (world.posX && world.posY) {
+    return [world.posX[entity], world.posY[entity], world.posZ[entity] + lift];
+  }
   return slotWorldPosition(world.formationSlot[entity], lift);
 }
 
@@ -50,7 +52,11 @@ export function approachTargetPosition(attackerSlot: number, targetSlot: number,
 
 export function lerpPosition(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
   const clamped = Math.max(0, Math.min(1, t));
-  return [a[0] + (b[0] - a[0]) * clamped, a[1] + (b[1] - a[1]) * clamped, a[2] + (b[2] - a[2]) * clamped];
+  return [
+    a[0] + (b[0] - a[0]) * clamped,
+    a[1] + (b[1] - a[1]) * clamped,
+    a[2] + (b[2] - a[2]) * clamped,
+  ];
 }
 
 function applyGridTilt([x, y, z]: [number, number, number]): [number, number, number] {

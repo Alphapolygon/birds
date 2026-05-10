@@ -29,7 +29,7 @@ export function BattleCanvas({ engine }: BattleCanvasProps) {
     <Canvas
       className="battle-canvas"
       orthographic
-      camera={{ position: [0, -1.2, 10], zoom: 44, near: 0.1, far: 100 }}
+      camera={{ position: [0, 0, 10], zoom: 95, near: 0.1, far: 100 }}
       gl={createWebGpuRenderer as any}
     >
       <SceneRuntime engine={engine} />
@@ -51,7 +51,7 @@ function SceneRuntime({ engine }: { engine: BattleEngine }) {
       <HealthCircles engine={engine} />
       <EntityBatches engine={engine} />
       <ShieldRings engine={engine} />
-      <TargetFeedback engine={engine} />
+   
       <VfxLayer engine={engine} />
       <FloatingDamageLayer engine={engine} />
     </group>
@@ -78,8 +78,8 @@ function DragSurface({ engine }: { engine: BattleEngine }) {
 }
 
 function updateCamera(camera: Camera, engine: BattleEngine, delta: number): void {
-  const targetZoom = engine.world.combatStarted === 1 ? 48 : 44;
-  const targetY = engine.world.combatStarted === 1 ? -0.8 : -1.2;
+  const targetZoom = engine.world.combatStarted === 1 ? 95 : 90;
+  const targetY = engine.world.combatStarted === 1 ? 1.5 : 1.5;
   const lerp = 1 - Math.pow(0.001, Math.min(0.05, delta));
 
   camera.position.x += (0 - camera.position.x) * lerp;

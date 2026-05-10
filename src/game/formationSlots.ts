@@ -1,7 +1,7 @@
 import { GRID_COLS, GRID_ROWS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS, TILE_SIZE, X_OFFSET, Y_OFFSET } from './constants';
 
-const GRID_TILT_X = -Math.PI / 4;
-const GRID_GROUP_POSITION: [number, number, number] = [0, -1.05, 0];
+const GRID_TILT_X = -Math.PI / 2.6;
+const GRID_GROUP_POSITION: [number, number, number] = [0, -0.2, 0];
 
 export const ACTIVE_BOARD_SLOTS = Array.from({ length: PLAYER_DEPLOY_COLS * GRID_ROWS }, (_, i) => i) as unknown as readonly number[];
 export const ENEMY_BOARD_SLOTS = Array.from({ length: ENEMY_DEPLOY_COLS * GRID_ROWS }, (_, i) => 100 + i) as unknown as readonly number[];
@@ -74,7 +74,7 @@ function buildSlotPositions(): Record<number, [number, number, number]> {
     positions[slot] = tileStagePosition(col, row, 0.32 + row * 0.015);
   });
   BENCH_SLOTS.forEach((slot, index) => {
-    positions[slot] = [BENCH_X[index], -4.4, 0.2];
+    positions[slot] = [BENCH_X[index], -5.5, 0.2];
   });
   return positions;
 }
