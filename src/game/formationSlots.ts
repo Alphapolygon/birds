@@ -1,5 +1,5 @@
 import { GRID_COLS, GRID_ROWS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS, TILE_SIZE, X_OFFSET, Y_OFFSET } from './constants';
-
+import { tileStagePosition } from '../render/sceneMath'; // Update import!
 const GRID_TILT_X = -Math.PI / 2.6;
 const GRID_GROUP_POSITION: [number, number, number] = [0, -0.2, 0];
 
@@ -66,20 +66,20 @@ function buildSlotPositions(): Record<number, [number, number, number]> {
   ACTIVE_BOARD_SLOTS.forEach((slot, index) => {
     const col = index % PLAYER_DEPLOY_COLS;
     const row = Math.floor(index / PLAYER_DEPLOY_COLS);
-    positions[slot] = tileStagePosition(col, row, 0.3 + row * 0.015);
+    positions[slot] = tileStagePosition(col, row, 0.15); // Use new perspective math
   });
   ENEMY_BOARD_SLOTS.forEach((slot, index) => {
     const col = GRID_COLS - ENEMY_DEPLOY_COLS + (index % ENEMY_DEPLOY_COLS);
     const row = Math.floor(index / ENEMY_DEPLOY_COLS) % GRID_ROWS;
-    positions[slot] = tileStagePosition(col, row, 0.32 + row * 0.015);
+    positions[slot] = tileStagePosition(col, row, 0.15);
   });
   BENCH_SLOTS.forEach((slot, index) => {
-    positions[slot] = [BENCH_X[index], -5.5, 0.2];
+    positions[slot] = [-12, 4 - index * 1.5, 0]; // Aligns with the left-hand HTML UI
   });
   return positions;
 }
 
-function tileStagePosition(x: number, y: number, localZ = 0): [number, number, number] {
+function tileStagePosition_old(x: number, y: number, localZ = 0): [number, number, number] {
   const localX = x * TILE_SIZE - X_OFFSET;
   const localY = Y_OFFSET - y * TILE_SIZE;
   const tiltedY = localY * Math.cos(GRID_TILT_X) - localZ * Math.sin(GRID_TILT_X);

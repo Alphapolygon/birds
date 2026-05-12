@@ -1,65 +1,76 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Color, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry } from 'three';
-import { GRID_COLS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS, TILE_COUNT, TILE_SIZE } from '../game/constants';
-import { GRID_GROUP_POSITION, GRID_TILT_X, tileGridPosition } from './sceneMath';
+import { useLayoutEffect, useMemo } from 'react';
+import { BufferAttribute, BufferGeometry, LineBasicMaterial, MeshBasicMaterial } from 'three';
+import { useGameStore } from '../store/useGameStore';
+import { perspectiveMap } from './sceneMath';
+import { GRID_COLS, GRID_ROWS } from '../game/constants';
 
 export function Board() {
-  const meshRef = useRef<InstancedMesh>(null);
-  const wireRef = useRef<InstancedMesh>(null);
+  const debugGrid = useGameStore((state) =>false);
 
-  const geometry = useMemo(() => new PlaneGeometry(TILE_SIZE * 0.96, TILE_SIZE * 0.96), []);
-  const wireGeom = useMemo(() => new PlaneGeometry(TILE_SIZE, TILE_SIZE), []);
+  const { geometry, material } = useMemo(() => {
+    const vertices: number[] = [];
+    const colors: number[] = [];
+    
+    function addQuad(colStart: number, colEnd: number, r: number, g: number, b: number) {
+      const tl = perspectiveMap(colStart, 0);
+      const tr = perspectiveMap(colEnd, 0);
+      const bl = perspectiveMap(colStart, 8);
+      const br = perspectiveMap(colEnd, 8);
 
-  // NEW: depthTest is false so the board stays perfectly in the background
-  const material = useMemo(() => new MeshBasicMaterial({ transparent: true, opacity: 0.3, vertexColors: true, depthWrite: false, depthTest: false }), []);
-  const wireMaterial = useMemo(() => new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, wireframe: false, depthWrite: false, depthTest: false }), []);
-
-  const dummy = useMemo(() => new Object3D(), []);
-  const color = useMemo(() => new Color(), []);
-
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    const wire = wireRef.current;
-    if (!mesh || !wire) return;
-
-    for (let index = 0; index < TILE_COUNT; index += 1) {
-      const x = index % GRID_COLS;
-      const y = Math.floor(index / GRID_COLS);
-
-      dummy.position.set(...tileGridPosition(x, y, -0.05));
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-
-      mesh.setMatrixAt(index, dummy.matrix);
-      wire.setMatrixAt(index, dummy.matrix);
-
-      let hexColor = '#ffffff';
-      let opacity = 0.0;
-
-      if (x < PLAYER_DEPLOY_COLS) {
-        hexColor = '#3b82f6';
-        opacity = 0.5;
-      } else if (x >= GRID_COLS - ENEMY_DEPLOY_COLS) {
-        hexColor = '#ec4899';
-        opacity = 0.5;
-      }
-
-      mesh.setColorAt(index, color.set(hexColor).multiplyScalar(opacity));
+      vertices.push(
+        tl.x, tl.y, 0,  tr.x, tr.y, 0,  bl.x, bl.y, 0,
+        tr.x, tr.y, 0,  br.x, br.y, 0,  bl.x, bl.y, 0
+      );
+      for (let i = 0; i < 6; i++) colors.push(r, g, b);
     }
 
-    mesh.count = TILE_COUNT;
-    wire.count = TILE_COUNT;
-    mesh.instanceMatrix.needsUpdate = true;
-    wire.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [color, dummy]);
+    // Blue Deploy Zone
+    addQuad(0, 2, 0.23, 0.51, 0.96);
+    // Pink Deploy Zone
+    addQuad(8, 10, 0.92, 0.28, 0.60);
+
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3));
+    geo.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3));
+    
+    const mat = new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false });
+    return { geometry: geo, material: mat };
+  }, []);
+
+  // NEW: Generate the 8x8 debug wireframe using the projection map
+  const { wireGeo, wireMat } = useMemo(() => {
+    const vertices: number[] = [];
+    for (let row = 0; row < GRID_ROWS; row += 1) {
+      for (let col = 0; col < GRID_COLS; col += 1) {
+        const tl = perspectiveMap(col, row);
+        const tr = perspectiveMap(col + 1, row);
+        const bl = perspectiveMap(col, row + 1);
+        const br = perspectiveMap(col + 1, row + 1);
+
+        // Draw 4 lines per cell
+        vertices.push(
+          tl.x, tl.y, 0,  tr.x, tr.y, 0,
+          tr.x, tr.y, 0,  br.x, br.y, 0,
+          br.x, br.y, 0,  bl.x, bl.y, 0,
+          bl.x, bl.y, 0,  tl.x, tl.y, 0
+        );
+      }
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3));
+    const mat = new LineBasicMaterial({ color: '#ffeb3b', transparent: true, opacity: 0, depthWrite: false, depthTest: false });
+    return { wireGeo: geo, wireMat: mat };
+  }, []);
+
+  // Listen to the store and toggle opacity
+  useLayoutEffect(() => {
+    wireMat.opacity = debugGrid ? 0.7 : 0;
+  }, [debugGrid, wireMat]);
 
   return (
-    <group position={GRID_GROUP_POSITION} rotation={[GRID_TILT_X, 0, 0]}>
-      {/* NEW: renderOrder is applied directly to the meshes! */}
-      <instancedMesh ref={meshRef} args={[geometry, material, TILE_COUNT]} frustumCulled={false} renderOrder={1} />
-      <instancedMesh ref={wireRef} args={[wireGeom, wireMaterial, TILE_COUNT]} frustumCulled={false} position={[0, 0, 0.01]} renderOrder={2} />
+    <group>
+      <mesh geometry={geometry} material={material} renderOrder={1} />
+      <lineSegments geometry={wireGeo} material={wireMat} renderOrder={2} />
     </group>
   );
 }

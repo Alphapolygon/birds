@@ -1,5 +1,5 @@
 export const GRID_ROWS = 8;
-export const GRID_COLS = 8;
+export const GRID_COLS = 10;
 export const TILE_COUNT = GRID_ROWS * GRID_COLS;
 export const MAX_ENTITIES = 2000;
 export const TILE_SIZE = 1;

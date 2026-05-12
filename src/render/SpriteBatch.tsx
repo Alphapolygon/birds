@@ -24,6 +24,8 @@ import { isBenchSlot } from '../game/formationSlots';
 import { entityStagePosition } from './sceneMath';
 import atlasImage from '../assets/sprites/INGAME_BIRDS_1.png';
 
+import { HORIZON_Y, D_TOP } from './sceneMath';
+
 type SpriteBatchProps = { engine: BattleEngine };
 
 export function SpriteBatch({ engine }: SpriteBatchProps) {
@@ -168,7 +170,8 @@ function spriteScale(world: BattleEngine['world'], entity: number): number {
 function perspectiveScale(world: BattleEngine['world'], entity: number): number {
   if (isBenchSlot(world.formationSlot[entity])) return 1;
   const y = world.draggedEntity === entity ? world.dragY : world.posY[entity];
-  return Math.max(0.78, Math.min(1.24, 1.0 + (-y - 0.05) * 0.12));
+  const d_v = HORIZON_Y - y;
+  return Math.max(0.4, d_v / D_TOP); 
 }
 
 function entityWorldPosition(world: BattleEngine['world'], entity: number): [number, number, number] {

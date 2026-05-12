@@ -1,4 +1,4 @@
-import { BOSS_ROUND_NUMBER, GRID_COLS, MAP_BATTLE_ROUNDS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS } from '../constants';
+
 import { randomAutoRelicBit } from '../relicCatalog';
 import { syncEntityAtlasFrame } from '../spriteAtlas';
 import { STAR_MAX_BY_UNIT, UNIT_CATALOG } from '../unitCatalog';
@@ -16,7 +16,36 @@ import { allocateEntity, emitEvent, resetWorld, resetTimeline, type World } from
 import { applyRelicMask } from './relics';
 import { placeFootprint, setTerrain } from './grid';
 
+import { BOSS_ROUND_NUMBER, GRID_COLS, GRID_ROWS, MAP_BATTLE_ROUNDS, PLAYER_DEPLOY_COLS, ENEMY_DEPLOY_COLS } from '../constants';
+
 export const SHOP_SIZE = 5;
+
+function getCenteredEnemySlots(): number[] {
+  const slots = [...(ENEMY_BOARD_SLOTS as unknown as number[])];
+  const midRow = (GRID_ROWS - 1) / 2;
+  
+  slots.sort((a, b) => {
+    const indexA = ENEMY_BOARD_SLOTS.indexOf(a as any);
+    const indexB = ENEMY_BOARD_SLOTS.indexOf(b as any);
+    const rowA = Math.floor(indexA / ENEMY_DEPLOY_COLS);
+    const rowB = Math.floor(indexB / ENEMY_DEPLOY_COLS);
+    
+    // 1. Sort by closest distance to the middle row
+    const distA = Math.abs(rowA - midRow);
+    const distB = Math.abs(rowB - midRow);
+    if (distA !== distB) return distA - distB;
+    
+    // 2. Tie-breaker: Put them in the front column first
+    const colA = indexA % ENEMY_DEPLOY_COLS;
+    const colB = indexB % ENEMY_DEPLOY_COLS;
+    if (colA !== colB) return colA - colB;
+    
+    // 3. Final tie-breaker for perfect symmetry
+    return rowA - rowB;
+  });
+  
+  return slots;
+}
 
 export function initializeBattle(world: World, seed: BattleSeed): void {
   resetWorld(world);
@@ -108,11 +137,19 @@ export function seedEnemyBoard(world: World, bossRule: BossRule, bossRound = fal
     seedBossRound(world, bossRule);
     return;
   }
+  
   const spawnCount = Math.min(ENEMY_BOARD_SLOTS.length - 1, 3 + Math.floor((round - 1) / 2));
   const pool: UnitId[] = round >= 6 ? ['pig_bruiser', 'pig_archer', 'pig_grunt', 'pig_thief'] : round >= 3 ? ['pig_archer', 'pig_grunt', 'pig_bruiser'] : ['pig_grunt', 'pig_archer', 'pig_grunt'];
-  for (let index = 0; index < spawnCount; index += 1) spawnUnitInSlot(world, pool[index % pool.length], ENEMY_BOARD_SLOTS[index]);
+  
+  // USE THE NEW CENTERED SLOTS
+  const centeredSlots = getCenteredEnemySlots(); 
+  
+  for (let index = 0; index < spawnCount; index += 1) {
+    spawnUnitInSlot(world, pool[index % pool.length], centeredSlots[index]);
+  }
+  
   if (round >= 2) {
-    const thiefSlot = ENEMY_BOARD_SLOTS[Math.min(spawnCount, ENEMY_BOARD_SLOTS.length - 2)];
+    const thiefSlot = centeredSlots[Math.min(spawnCount, centeredSlots.length - 1)];
     const thief = spawnUnitInSlot(world, 'pig_thief', thiefSlot);
     world.carriesRelic[thief] = randomAutoRelicBit();
     emitEvent(world, { type: 'relic_gained', entity: thief, message: `${world.displayName[thief]} is carrying a Golden Egg relic. Defeat it before 3 attacks.` });
@@ -241,14 +278,19 @@ function setupPreparationRound(world: World, originalBossRule: BossRule): void {
 }
 
 function seedBossRound(world: World, bossRule: BossRule): void {
-  spawnUnitInSlot(world, 'pig_bruiser', ENEMY_BOARD_SLOTS[0]);
-  spawnUnitInSlot(world, 'pig_archer', ENEMY_BOARD_SLOTS[1]);
-  spawnUnitInSlot(world, 'pig_grunt', ENEMY_BOARD_SLOTS[3]);
-  spawnBoss(world, bossRule === BossRule.None ? BossRule.ComboDrain : bossRule);
+  const centered = getCenteredEnemySlots();
+  
+  // Dynamically place the boss round units fanning out from the center
+  spawnUnitInSlot(world, 'pig_bruiser', centered[0]); // Front Center
+  spawnUnitInSlot(world, 'pig_archer', centered[2]);  // Front Flank 1
+  spawnUnitInSlot(world, 'pig_grunt', centered[4]);   // Front Flank 2
+  
+  // Boss goes in the Back Center (Index 1)
+  spawnBoss(world, bossRule === BossRule.None ? BossRule.ComboDrain : bossRule, centered[1]); 
 }
 
-function spawnBoss(world: World, bossRule: BossRule): void {
-  const boss = spawnUnitInSlot(world, 'pig_boss', ENEMY_BOARD_SLOTS[ENEMY_BOARD_SLOTS.length - 1]);
+function spawnBoss(world: World, bossRule: BossRule, slot: number): void {
+  const boss = spawnUnitInSlot(world, 'pig_boss', slot);
   world.bossEntity = boss;
   world.hp[boss] = bossRule === BossRule.ComboDrain ? 52 : 42;
   world.maxHp[boss] = world.hp[boss];

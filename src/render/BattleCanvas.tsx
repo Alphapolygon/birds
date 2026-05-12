@@ -25,11 +25,12 @@ export function BattleCanvas({ engine }: BattleCanvasProps) {
   const battleId = useGameStore((state) => state.battleId);
   const territoryId = useGameStore((state) => state.selectedTerritoryId ?? '');
   usePrepareRound(engine, phase, bossRule, territoryId, battleId);
-  return (
+return (
     <Canvas
       className="battle-canvas"
       orthographic
-      camera={{ position: [0, 0, 10], zoom: 95, near: 0.1, far: 100 }}
+      // X spans exactly 28.16, Y spans exactly 15.36!
+      camera={{ position: [0, 0, 10], left: -14.08, right: 14.08, top: 7.68, bottom: -7.68, near: 0.1, far: 100 }}
       gl={createWebGpuRenderer as any}
     >
       <SceneRuntime engine={engine} />
@@ -40,24 +41,21 @@ export function BattleCanvas({ engine }: BattleCanvasProps) {
 function SceneRuntime({ engine }: { engine: BattleEngine }) {
   useFrame(({ camera }, delta) => {
     engine.tick(delta);
-    updateCamera(camera, engine, delta);
+    
   });
   return (
     <group>
       <DragSurface engine={engine} />
       <Board />
-      <SlotGuides engine={engine} />
       <UnitShadows engine={engine} />
       <HealthCircles engine={engine} />
       <EntityBatches engine={engine} />
       <ShieldRings engine={engine} />
-   
       <VfxLayer engine={engine} />
       <FloatingDamageLayer engine={engine} />
     </group>
   );
 }
-
 function DragSurface({ engine }: { engine: BattleEngine }) {
   const onPointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (engine.world.draggedEntity < 0) return;
@@ -77,19 +75,7 @@ function DragSurface({ engine }: { engine: BattleEngine }) {
   );
 }
 
-function updateCamera(camera: Camera, engine: BattleEngine, delta: number): void {
-  const targetZoom = engine.world.combatStarted === 1 ? 95 : 90;
-  const targetY = engine.world.combatStarted === 1 ? 1.5 : 1.5;
-  const lerp = 1 - Math.pow(0.001, Math.min(0.05, delta));
 
-  camera.position.x += (0 - camera.position.x) * lerp;
-  camera.position.y += (targetY - camera.position.y) * lerp;
-
-  if (camera instanceof OrthographicCamera) {
-    camera.zoom += (targetZoom - camera.zoom) * lerp;
-    camera.updateProjectionMatrix();
-  }
-}
 
 
 function usePrepareRound(engine: BattleEngine, phase: string, bossRule: Parameters<BattleEngine['prepareRound']>[0]['bossRule'], territoryId: string, battleId: number): void {

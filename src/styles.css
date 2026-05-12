@@ -63,13 +63,11 @@ select {
 .battle-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 11 / 6; /* EXACT match to 2816x1536 */
   border: 1px solid #242b3d;
   border-radius: 24px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(5, 8, 14, 0.08), rgba(5, 8, 14, 0.2)),
-    url("./assets/backgrounds/pig-fort-background.png") center / cover no-repeat;
+  background: url("./assets/backgrounds/pig-fort-background.png") center / 100% 100% no-repeat;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
 }
 

@@ -53,6 +53,8 @@ import {
 } from './spawn';
 import { clearDrag, createWorld, drainEvents, emitEvent, isAlive as worldEntityIsAlive, type World } from './world';
 
+import { tileStagePosition } from '../../render/sceneMath';
+
 export const ACTION_GAUGE_MAX = 100;
 export const MANA_MAX = 100;
 export const AUTO_ATTACK_IMPACT_SECONDS = 0.24;
@@ -1229,31 +1231,24 @@ export function createBattleEngine(onEvent: (event: GameEvent) => void) {
     world.homeZ[entity] = z;
   }
 
-  function combatTilePosition(x: number, y: number, localZ = 0): [number, number, number] {
-    const localX = x * TILE_SIZE - X_OFFSET;
-    const localY = Y_OFFSET - y * TILE_SIZE;
-    const tilt = -Math.PI / 2.6;
-    const tiltedY = localY * Math.cos(tilt) - localZ * Math.sin(tilt);
-    const tiltedZ = localY * Math.sin(tilt) + localZ * Math.cos(tilt);
-    return [localX, tiltedY - 0.2, tiltedZ];
+function combatTilePosition(x: number, y: number, localZ = 0): [number, number, number] {
+    // Drop the old 3D tilt math and use the exact same 2D perspective map as the visual grid!
+    return tileStagePosition(x, y, localZ);
   }
 
-  function clientToStagePoint(clientX: number, clientY: number): { x: number; y: number } {
+function clientToStagePoint(clientX: number, clientY: number): { x: number; y: number } {
     const fallback = { x: world.dragX || 0, y: world.dragY || 0 };
     if (typeof document === 'undefined') return fallback;
     const element = document.querySelector('.battle-stage canvas') ?? document.querySelector('.battle-stage');
     const rect = element?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return fallback;
     
-    // Orthographic Math: perfectly matches the 90/95 zoom and 1.5 Y-offset in BattleCanvas
-    const zoom = world.combatStarted === 1 ? 95 : 90;
-    const cameraY = 1.5;
-    
+    // Perfectly maps the mouse into the locked [-14.08, 14.08] x [-7.68, 7.68] camera space
     const nx = (clientX - rect.left) / rect.width;
     const ny = (clientY - rect.top) / rect.height;
     return {
-      x: (nx - 0.5) * (rect.width / zoom),
-      y: (0.5 - ny) * (rect.height / zoom) + cameraY,
+      x: -14.08 + nx * 28.16,
+      y: 7.68 - ny * 15.36,
     };
   }
 
